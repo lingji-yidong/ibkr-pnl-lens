@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IBKR 盈虧比計算器</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">IBKR Activity Statement</p>
+          <h1>盈虧比報表分析</h1>
+        </div>
+      </section>
+
+      <section class="upload-panel" id="dropZone">
+        <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" />
+        <div class="upload-copy">
+          <span class="upload-mark">Flex XML</span>
+          <h2>拖入或選擇 IBKR XML</h2>
+          <p>名稱、帳戶、地址會在畫面與本地分析中脫敏。</p>
+        </div>
+        <label class="primary-action" for="fileInput">選擇文件</label>
+      </section>
+
+      <section class="privacy-strip" id="privacyStrip" hidden>
+        <div>
+          <span class="label">帳戶</span>
+          <strong id="maskedAccount">--</strong>
+        </div>
+        <div>
+          <span class="label">名稱</span>
+          <strong id="maskedName">--</strong>
+        </div>
+        <div>
+          <span class="label">期間</span>
+          <strong id="period">--</strong>
+        </div>
+        <div>
+          <span class="label">基礎貨幣</span>
+          <strong id="baseCurrency">--</strong>
+        </div>
+      </section>
+
+      <section class="metrics-grid" id="metricsGrid" hidden></section>
+
+      <section class="workspace" id="workspace" hidden>
+        <article class="panel wide">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Equity Curve</p>
+              <h2>每日已實現損益</h2>
+            </div>
+            <span id="tradeCount" class="pill">0 平倉 / 0 成交</span>
+          </div>
+          <canvas id="dailyChart" height="280"></canvas>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Payoff</p>
+              <h2>贏虧分布</h2>
+            </div>
+          </div>
+          <canvas id="distributionChart" height="280"></canvas>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Discipline</p>
+              <h2>紀律風險</h2>
+            </div>
+          </div>
+          <div id="disciplineList" class="insight-list"></div>
+          <div class="philosophy-block">
+            <p class="eyebrow">Best Loser Wins</p>
+            <div id="bestLoserList" class="insight-list"></div>
+          </div>
+        </article>
+
+        <article class="panel wide">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Symbols</p>
+              <h2>標的表現</h2>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>標的</th>
+                  <th>資產</th>
+                  <th>已實現</th>
+                  <th>交易數</th>
+                  <th>勝率</th>
+                  <th>平均盈虧</th>
+                </tr>
+              </thead>
+              <tbody id="symbolRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Offline Coach</p>
+              <h2>離線建議</h2>
+            </div>
+          </div>
+          <div id="offlineAdvice" class="insight-list"></div>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
