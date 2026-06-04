@@ -1,6 +1,6 @@
 import { escapeHtml, money, percent, ratio } from "../domain/format";
-import type { Insight, ParsedStatement, SymbolSummary } from "../domain/types";
-import { drawDailyChart, drawDistributionChart } from "./chart";
+import type { Insight, ParsedStatement, PeriodPerformance, SymbolSummary } from "../domain/types";
+import { drawDailyChart, drawDistributionChart, drawPeriodPerformanceChart } from "./chart";
 
 export interface AppElements {
   privacyStrip: HTMLElement;
@@ -13,8 +13,12 @@ export interface AppElements {
   tradeCount: HTMLElement;
   dailyChart: HTMLCanvasElement;
   distributionChart: HTMLCanvasElement;
+  weeklyChart: HTMLCanvasElement;
+  monthlyChart: HTMLCanvasElement;
   disciplineList: HTMLElement;
   bestLoserList: HTMLElement;
+  weeklyRows: HTMLElement;
+  monthlyRows: HTMLElement;
   symbolRows: HTMLElement;
   offlineAdvice: HTMLElement;
 }
@@ -44,9 +48,13 @@ export function renderReport(els: AppElements, report: ParsedStatement): void {
 
   drawDailyChart(els.dailyChart, report.daily);
   drawDistributionChart(els.distributionChart, report.closedTrades);
+  drawPeriodPerformanceChart(els.weeklyChart, report.weekly);
+  drawPeriodPerformanceChart(els.monthlyChart, report.monthly);
   renderInsights(els.disciplineList, report.discipline);
   renderInsights(els.bestLoserList, report.bestLoserWins);
   renderInsights(els.offlineAdvice, report.offlineAdvice);
+  renderPeriods(els.weeklyRows, report.weekly, 10);
+  renderPeriods(els.monthlyRows, report.monthly, 8);
   renderSymbols(els.symbolRows, report.symbols);
 }
 
@@ -91,6 +99,22 @@ function renderSymbols(target: HTMLElement, symbols: SymbolSummary[]): void {
         <td class="num">${row.count}</td>
         <td class="num">${percent(row.winRate)}</td>
         <td class="num ${tone}">${money(row.average)}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderPeriods(target: HTMLElement, periods: PeriodPerformance[], limit: number): void {
+  target.innerHTML = periods.slice(-limit).map((row) => {
+    const tone = row.pnl >= 0 ? "win" : "loss";
+    return `
+      <tr>
+        <td>${escapeHtml(row.label)}</td>
+        <td class="num ${tone}">${money(row.pnl)}</td>
+        <td class="num">${ratio(row.profitFactor)}</td>
+        <td class="num">${ratio(row.payoffRatio)}</td>
+        <td class="num">${percent(row.winRate)}</td>
+        <td class="num">${row.count}</td>
       </tr>
     `;
   }).join("");

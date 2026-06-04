@@ -76,8 +76,12 @@ function getElements(): AppElements {
     tradeCount: getElement("tradeCount"),
     dailyChart: getElement("dailyChart"),
     distributionChart: getElement("distributionChart"),
+    weeklyChart: getElement("weeklyChart"),
+    monthlyChart: getElement("monthlyChart"),
     disciplineList: getElement("disciplineList"),
     bestLoserList: getElement("bestLoserList"),
+    weeklyRows: getElement("weeklyRows"),
+    monthlyRows: getElement("monthlyRows"),
     symbolRows: getElement("symbolRows"),
     offlineAdvice: getElement("offlineAdvice"),
   };

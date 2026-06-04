@@ -301,10 +301,19 @@ canvas {
   overflow: auto;
 }
 
+.table-wrap.compact {
+  max-height: 330px;
+  border-top: 1px solid var(--line);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
   min-width: 680px;
+}
+
+.table-wrap.compact table {
+  min-width: 520px;
 }
 
 th,
@@ -318,6 +327,13 @@ td {
 th {
   color: var(--muted);
   font-size: 12px;
+  white-space: nowrap;
+}
+
+.table-wrap.compact th,
+.table-wrap.compact td {
+  padding: 9px 8px;
+  font-size: 13px;
 }
 
 .num {

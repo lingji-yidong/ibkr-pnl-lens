@@ -85,6 +85,19 @@ export interface DailyPnl {
   cumulative: number;
 }
 
+export interface PeriodPerformance {
+  label: string;
+  pnl: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+  winRate: number;
+  count: number;
+  wins: number;
+  losses: number;
+}
+
 export interface SymbolSummary {
   symbol: string;
   assetClass: AssetClass;
@@ -108,6 +121,8 @@ export interface ParsedStatement {
   canceledOrders: FlexOrder[];
   metrics: MetricSummary;
   daily: DailyPnl[];
+  weekly: PeriodPerformance[];
+  monthly: PeriodPerformance[];
   symbols: SymbolSummary[];
   discipline: Insight[];
   bestLoserWins: Insight[];

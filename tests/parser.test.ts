@@ -13,6 +13,11 @@ assert.equal(report.metrics.canceledOrderCount, 0);
 assert.ok(report.metrics.net < 0);
 assert.ok(report.metrics.profitFactor > 0);
 assert.ok(report.daily.length > 10);
+assert.ok(report.weekly.length > 1);
+assert.ok(report.monthly.length > 1);
+assert.equal(round2(report.weekly.reduce((total, row) => total + row.pnl, 0)), round2(report.metrics.net));
+assert.equal(round2(report.monthly.reduce((total, row) => total + row.pnl, 0)), round2(report.metrics.net));
+assert.ok(report.weekly.every((row) => row.count === row.wins + row.losses));
 assert.ok(report.symbols[0]?.symbol);
 assert.ok(report.symbols.some((row) => row.symbol.startsWith("XSP ")));
 assert.ok(!report.symbols.some((row) => ["C", "C;Ep", "C;L", "C;L;P", "C;Ex", "C;P"].includes(row.symbol)));
@@ -30,4 +35,10 @@ console.log(JSON.stringify({
   winRate: Number((report.metrics.winRate * 100).toFixed(1)),
   topSymbol: report.symbols[0]?.symbol,
   autoExpiry: report.metrics.autoExpiryCount,
+  weeks: report.weekly.length,
+  months: report.monthly.length,
 }, null, 2));
+
+function round2(value: number): number {
+  return Number(value.toFixed(2));
+}

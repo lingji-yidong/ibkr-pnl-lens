@@ -8,6 +8,7 @@ import type {
   Insight,
   MetricSummary,
   ParsedStatement,
+  PeriodPerformance,
   SymbolSummary,
 } from "./types";
 
@@ -29,6 +30,8 @@ export function parseIbkrStatement(text: string): ParsedStatement {
     canceledOrders,
     metrics,
     daily: buildDaily(closedTrades),
+    weekly: buildPeriodPerformance(closedTrades, weekLabel),
+    monthly: buildPeriodPerformance(closedTrades, monthLabel),
     symbols: buildSymbols(closedTrades),
     discipline: buildDiscipline(closedTrades),
     bestLoserWins: buildBestLoserWins({ closedTrades, metrics }),
@@ -122,6 +125,53 @@ function buildDaily(closedTrades: ClosedTrade[]): DailyPnl[] {
       cumulative += day.pnl;
       return { ...day, cumulative };
     });
+}
+
+function buildPeriodPerformance(closedTrades: ClosedTrade[], getLabel: (trade: ClosedTrade) => string): PeriodPerformance[] {
+  const byPeriod = new Map<string, { label: string; pnls: number[] }>();
+  for (const trade of closedTrades) {
+    if (!trade.day || trade.realizedPnl === 0) continue;
+    const label = getLabel(trade);
+    const current = byPeriod.get(label) || { label, pnls: [] };
+    current.pnls.push(trade.realizedPnl);
+    byPeriod.set(label, current);
+  }
+
+  return [...byPeriod.values()].sort((a, b) => a.label.localeCompare(b.label)).map(({ label, pnls }) => {
+    const wins = pnls.filter((value) => value > 0);
+    const losses = pnls.filter((value) => value < 0);
+    const grossProfit = sum(wins);
+    const grossLoss = Math.abs(sum(losses));
+    const avgWin = avg(wins);
+    const avgLoss = Math.abs(avg(losses));
+
+    return {
+      label,
+      pnl: sum(pnls),
+      grossProfit,
+      grossLoss,
+      profitFactor: grossLoss ? grossProfit / grossLoss : grossProfit ? Infinity : 0,
+      payoffRatio: avgLoss ? avgWin / avgLoss : avgWin ? Infinity : 0,
+      winRate: pnls.length ? wins.length / pnls.length : 0,
+      count: pnls.length,
+      wins: wins.length,
+      losses: losses.length,
+    };
+  });
+}
+
+function weekLabel(trade: ClosedTrade): string {
+  const date = new Date(`${trade.day}T00:00:00Z`);
+  const mondayOffset = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - mondayOffset);
+  const start = date.toISOString().slice(0, 10);
+  const end = new Date(date);
+  end.setUTCDate(end.getUTCDate() + 6);
+  return `${start} - ${end.toISOString().slice(5, 10)}`;
+}
+
+function monthLabel(trade: ClosedTrade): string {
+  return trade.day.slice(0, 7);
 }
 
 function buildSymbols(closedTrades: ClosedTrade[]): SymbolSummary[] {
