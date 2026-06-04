@@ -151,11 +151,17 @@ function drawCanvas(
   canvas: HTMLCanvasElement,
   theme: ChartTheme,
   painter: (args: { ctx: CanvasRenderingContext2D; width: number; height: number; pad: number }) => void,
+  retry = true,
 ): void {
   const ratioValue = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.round(Math.max(320, rect.width) * ratioValue);
-  const cssHeight = Number(canvas.getAttribute("height")) || 260;
+  if (rect.width < 16) {
+    if (retry) window.requestAnimationFrame(() => drawCanvas(canvas, theme, painter, false));
+    return;
+  }
+  const cssWidth = Math.max(320, rect.width);
+  const cssHeight = Math.max(180, rect.height || 260);
+  canvas.width = Math.round(cssWidth * ratioValue);
   canvas.height = Math.round(cssHeight * ratioValue);
   const ctx = canvas.getContext("2d");
   if (!ctx) return;

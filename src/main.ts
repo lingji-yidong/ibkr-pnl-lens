@@ -1,7 +1,7 @@
 import { parseIbkrStatement } from "./domain/analytics";
 import type { ParsedStatement } from "./domain/types";
 import { localeOptions, normalizeLocale, t, type Locale } from "./ui/i18n";
-import { type AppElements, type PeriodMode, type SortDirection, type SortState, type SortTable, type ThemeMode, renderError, renderReport, translateStaticText } from "./ui/render";
+import { type AppElements, type PeriodMode, type SortDirection, type SortState, type SortTable, type ThemeMode, renderError, renderPeriodSection, renderReport, translateStaticText } from "./ui/render";
 
 interface AppState {
   report: ParsedStatement | null;
@@ -82,7 +82,7 @@ function bindEvents(): void {
     button.addEventListener("click", () => {
       state.periodMode = button.dataset.period === "monthly" ? "monthly" : "weekly";
       localStorage.setItem("ibkr-pnl-period", state.periodMode);
-      renderCurrentReport();
+      renderCurrentPeriod();
     });
   }
 
@@ -98,7 +98,8 @@ function bindEvents(): void {
       ...state.sorts,
       [table]: { table, key, direction },
     };
-    renderCurrentReport();
+    if (table === "period") renderCurrentPeriod();
+    else renderCurrentReport();
   });
 }
 
@@ -150,6 +151,16 @@ function themeIcon(theme: ThemeMode): string {
 function renderCurrentReport(): void {
   if (!state.report) return;
   renderReport(els, state.report, {
+    locale: state.locale,
+    periodMode: state.periodMode,
+    theme: state.theme,
+    sorts: state.sorts,
+  });
+}
+
+function renderCurrentPeriod(): void {
+  if (!state.report) return;
+  renderPeriodSection(els, state.report, {
     locale: state.locale,
     periodMode: state.periodMode,
     theme: state.theme,

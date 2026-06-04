@@ -72,6 +72,21 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   ]);
 
   const chartOptions = { locale: options.locale, theme: cssChartTheme() };
+  drawDailyChart(els.dailyChart, report.daily, chartOptions);
+  drawDistributionChart(els.distributionChart, report.closedTrades, chartOptions);
+  renderPeriodSection(els, report, options);
+
+  const advice = buildLocalizedAdvice(report, options.locale);
+  renderInsights(els.disciplineList, advice.discipline);
+  renderInsights(els.bestLoserList, advice.bestLoserWins);
+  renderInsights(els.offlineAdvice, advice.offlineAdvice);
+  renderAssetGroups(els.assetRows, report.assetGroups, options.locale);
+  renderOptionRows(els.optionRows, sortRows(report.optionUnderlyingDays, options.sorts.option), options.locale);
+  renderSymbols(els.symbolRows, sortRows(report.symbols, options.sorts.symbol), options.locale);
+  updateSortButtons(options.sorts);
+}
+
+export function renderPeriodSection(els: AppElements, report: ParsedStatement, options: RenderOptions): void {
   const periods = options.periodMode === "weekly" ? report.weekly : report.monthly;
   els.periodTitle.textContent = options.periodMode === "weekly"
     ? `${t(options.locale, "weekly")} ${t(options.locale, "payoffRatio")}`
@@ -80,18 +95,8 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   els.periodWeekly.classList.toggle("active", options.periodMode === "weekly");
   els.periodMonthly.classList.toggle("active", options.periodMode === "monthly");
 
-  drawDailyChart(els.dailyChart, report.daily, chartOptions);
-  drawDistributionChart(els.distributionChart, report.closedTrades, chartOptions);
-  drawPeriodPerformanceChart(els.periodChart, periods, chartOptions);
-
-  const advice = buildLocalizedAdvice(report, options.locale);
-  renderInsights(els.disciplineList, advice.discipline);
-  renderInsights(els.bestLoserList, advice.bestLoserWins);
-  renderInsights(els.offlineAdvice, advice.offlineAdvice);
-  renderPeriods(els.periodRows, sortRows(periods, options.sorts.period), options.periodMode === "weekly" ? 12 : 12, Boolean(options.sorts.period));
-  renderAssetGroups(els.assetRows, report.assetGroups, options.locale);
-  renderOptionRows(els.optionRows, sortRows(report.optionUnderlyingDays, options.sorts.option), options.locale);
-  renderSymbols(els.symbolRows, sortRows(report.symbols, options.sorts.symbol), options.locale);
+  drawPeriodPerformanceChart(els.periodChart, periods, { locale: options.locale, theme: cssChartTheme() });
+  renderPeriods(els.periodRows, sortRows(periods, options.sorts.period), 12, Boolean(options.sorts.period));
   updateSortButtons(options.sorts);
 }
 
