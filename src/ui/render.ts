@@ -159,15 +159,19 @@ function renderAssetGroups(target: HTMLElement, rows: AssetGroupSummary[], local
   target.innerHTML = rows.map((row) => {
     const tone = row.pnl >= 0 ? "win" : "loss";
     return `
-      <tr>
-        <td>${escapeHtml(assetGroupName(row.group, locale))}</td>
-        <td class="num ${tone}">${money(row.pnl)}</td>
-        <td class="num">${ratio(row.profitFactor)}</td>
-        <td class="num">${ratio(row.payoffRatio)}</td>
-        <td class="num">${percent(row.winRate)}</td>
-        <td class="num ${tone}">${money(row.average)}</td>
-        <td class="num">${row.count}</td>
-      </tr>
+      <article class="asset-card">
+        <div class="asset-card-head">
+          <span>${escapeHtml(assetGroupName(row.group, locale))}</span>
+          <strong class="${tone}">${money(row.pnl)}</strong>
+        </div>
+        <dl>
+          <div><dt>${escapeHtml(t(locale, "pf"))}</dt><dd>${ratio(row.profitFactor)}</dd></div>
+          <div><dt>${escapeHtml(t(locale, "payoffShort"))}</dt><dd>${ratio(row.payoffRatio)}</dd></div>
+          <div><dt>${escapeHtml(t(locale, "winRate"))}</dt><dd>${percent(row.winRate)}</dd></div>
+          <div><dt>${escapeHtml(t(locale, "average"))}</dt><dd class="${tone}">${money(row.average)}</dd></div>
+          <div><dt>${escapeHtml(t(locale, "trades"))}</dt><dd>${row.count}</dd></div>
+        </dl>
+      </article>
     `;
   }).join("");
 }

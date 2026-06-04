@@ -14,11 +14,13 @@
           <h1 data-i18n="title">盈虧比報表分析</h1>
         </div>
         <div class="settings-bar" aria-label="Settings">
-          <label>
-            <span data-i18n="language">語言</span>
+          <label class="language-control" title="Language">
+            <span class="settings-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0c2.1-2.4 3.2-5.4 3.2-9S14.1 5.4 12 3m0 18c-2.1-2.4-3.2-5.4-3.2-9S9.9 5.4 12 3M3.6 9h16.8M3.6 15h16.8"/></svg>
+            </span>
             <select id="localeSelect"></select>
           </label>
-          <button id="themeToggle" class="secondary-action" type="button" aria-pressed="false" data-i18n="dark">深色</button>
+          <button id="themeToggle" class="icon-action" type="button" aria-pressed="false" aria-label="Theme"></button>
         </div>
       </section>
 
@@ -28,6 +30,7 @@
           <span class="upload-mark" data-i18n="uploadMark">Flex XML</span>
           <h2 data-i18n="uploadTitle">拖入或選擇 IBKR XML</h2>
           <p data-i18n="uploadBody">名稱、帳戶、地址會在畫面與本地分析中脫敏。</p>
+          <p class="nfa-note" data-i18n="nfaDisclaimer">僅供學習與交易復盤，不構成投資建議。</p>
         </div>
         <label class="primary-action" for="fileInput" data-i18n="chooseFile">選擇文件</label>
       </section>
@@ -88,7 +91,7 @@
             </div>
           </div>
           <canvas id="periodChart" class="chart-canvas" height="260"></canvas>
-          <div class="table-wrap compact">
+          <div class="table-wrap compact period-table">
             <table>
               <thead>
                 <tr>
@@ -105,29 +108,14 @@
           </div>
         </article>
 
-        <article class="panel">
+        <article class="panel asset-panel">
           <div class="panel-head">
             <div>
               <p class="eyebrow" data-i18n="assetBreakdown">Assets</p>
               <h2 data-i18n="assetBreakdownTitle">股票 / 期權統計</h2>
             </div>
           </div>
-          <div class="table-wrap compact">
-            <table>
-              <thead>
-                <tr>
-                  <th data-i18n="asset">資產</th>
-                  <th data-i18n="realized">已實現</th>
-                  <th data-i18n="pf">PF</th>
-                  <th data-i18n="payoffShort">盈虧比</th>
-                  <th data-i18n="winRate">勝率</th>
-                  <th data-i18n="average">平均</th>
-                  <th data-i18n="trades">筆數</th>
-                </tr>
-              </thead>
-              <tbody id="assetRows"></tbody>
-            </table>
-          </div>
+          <div id="assetRows" class="asset-compare"></div>
         </article>
 
         <article class="panel wide">

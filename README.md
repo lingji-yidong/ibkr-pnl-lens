@@ -35,6 +35,12 @@ IBKR PnL Lens runs in your browser. The uploaded XML is parsed locally and is no
 
 The UI masks account identifiers such as `U12345678` into a redacted format. Still, treat exported brokerage statements as sensitive files and avoid committing them to Git.
 
+## Not Financial Advice
+
+IBKR PnL Lens is for education, trade review, and personal journaling only. It does not provide financial, investment, tax, legal, or trading advice.
+
+Any rule-based notes shown by the app are generated from the uploaded statement data and should be treated as review prompts, not recommendations to buy, sell, hold, size, or manage any position.
+
 ## Metrics
 
 - **Net realized P/L**: Sum of realized P/L from closed trades.
@@ -82,7 +88,7 @@ The production bundle is written to `dist/`.
 
 ## Cloudflare Wrangler Deployment
 
-This repo is configured for Cloudflare Workers static asset deployment:
+This repo is configured for Cloudflare Workers static asset deployment through `wrangler.toml`:
 
 ```toml
 name = "ibkr-pnl-lens"
@@ -118,14 +124,13 @@ Cloudflare Pages settings:
 
 If you still prefer Pages, connect the GitHub repo and use the settings above. The app is a static frontend and does not require a backend worker.
 
-## GitHub
+## Repository Hygiene
 
-```bash
-git add .
-git commit -m "feat: describe your change"
-git push
-```
+- Do not commit real brokerage statements, Flex XML exports, account IDs, local file paths, or screenshots containing personal data.
+- Keep test fixtures synthetic and small.
+- Use lower-case Conventional Commits, for example `feat: add period chart` or `fix: mask account id`.
+- Before publishing changes, run `npm test` and `npm run build`.
 
 ## Status
 
-This is an early version. The current focus is accurate IBKR Flex XML parsing, privacy, and a clean offline workflow.
+This is an early version. The current focus is accurate IBKR Flex XML parsing, privacy, clear offline reporting, and deployment as a small static Cloudflare app.

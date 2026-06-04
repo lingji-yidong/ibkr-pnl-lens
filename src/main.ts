@@ -107,14 +107,27 @@ function initializePreferences(): void {
 function applyTheme(): void {
   document.documentElement.dataset.theme = state.theme;
   const themeToggle = getElement<HTMLButtonElement>("themeToggle");
-  themeToggle.textContent = state.theme === "dark" ? t(state.locale, "light") : t(state.locale, "dark");
+  const nextThemeLabel = state.theme === "dark" ? t(state.locale, "light") : t(state.locale, "dark");
+  themeToggle.innerHTML = themeIcon(state.theme);
+  themeToggle.title = nextThemeLabel;
+  themeToggle.setAttribute("aria-label", nextThemeLabel);
   themeToggle.setAttribute("aria-pressed", String(state.theme === "dark"));
 }
 
 function applyLocale(): void {
   document.documentElement.lang = state.locale;
   translateStaticText(state.locale);
-  getElement<HTMLButtonElement>("themeToggle").textContent = state.theme === "dark" ? t(state.locale, "light") : t(state.locale, "dark");
+  const localeSelect = getElement<HTMLSelectElement>("localeSelect");
+  localeSelect.title = t(state.locale, "language");
+  localeSelect.setAttribute("aria-label", t(state.locale, "language"));
+  applyTheme();
+}
+
+function themeIcon(theme: ThemeMode): string {
+  if (theme === "dark") {
+    return `<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 3v2.2M12 18.8V21M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M3 12h2.2M18.8 12H21M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>`;
+  }
+  return `<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M20.2 15.8A8.2 8.2 0 0 1 8.2 3.8 7.2 7.2 0 1 0 20.2 15.8Z"/></svg>`;
 }
 
 function renderCurrentReport(): void {

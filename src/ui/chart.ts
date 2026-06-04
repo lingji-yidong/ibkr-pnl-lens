@@ -22,7 +22,7 @@ export function drawDailyChart(canvas: HTMLCanvasElement, daily: DailyPnl[], opt
   drawCanvas(canvas, options.theme, ({ ctx, width, height, pad }) => {
     const values = daily.map((row) => row.pnl);
     const cumulative = daily.map((row) => row.cumulative);
-    const { min, max } = chartBounds([...values, ...cumulative]);
+    const { min, max } = paddedBounds([...values, ...cumulative, 0]);
     const y = scale(min, max, height - pad, pad);
     const step = daily.length > 1 ? (width - pad * 2) / (daily.length - 1) : width - pad * 2;
     const zeroY = y(0);
@@ -105,6 +105,7 @@ export function drawPeriodPerformanceChart(canvas: HTMLCanvasElement, periods: P
     const pfY = scale(0, pfMax, plotBottom, pad);
     const step = periods.length > 1 ? (width - pad * 2) / (periods.length - 1) : width - pad * 2;
     const zeroY = pnlY(0);
+    const pfOneY = pfY(Math.min(1, pfMax));
 
     ctx.strokeStyle = options.theme.line;
     ctx.lineWidth = 1;
@@ -112,6 +113,15 @@ export function drawPeriodPerformanceChart(canvas: HTMLCanvasElement, periods: P
     ctx.moveTo(pad, zeroY);
     ctx.lineTo(width - pad, zeroY);
     ctx.stroke();
+
+    ctx.save();
+    ctx.setLineDash([4, 5]);
+    ctx.strokeStyle = options.theme.line;
+    ctx.beginPath();
+    ctx.moveTo(pad, pfOneY);
+    ctx.lineTo(width - pad, pfOneY);
+    ctx.stroke();
+    ctx.restore();
 
     periods.forEach((period, index) => {
       const x = pad + index * step;
@@ -121,27 +131,15 @@ export function drawPeriodPerformanceChart(canvas: HTMLCanvasElement, periods: P
       ctx.fillRect(x - barWidth / 2, Math.min(zeroY, y), barWidth, Math.abs(y - zeroY) || 2);
     });
 
-    ctx.strokeStyle = options.theme.ink;
-    ctx.lineWidth = 2.25;
-    ctx.beginPath();
     periods.forEach((period, index) => {
       const x = pad + index * step;
       const boundedPf = Number.isFinite(period.profitFactor) ? period.profitFactor : pfMax;
       const y = pfY(Math.min(boundedPf, pfMax));
-      if (index === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-
-    periods.forEach((period, index) => {
-      const x = pad + index * step;
-      const boundedPf = Number.isFinite(period.profitFactor) ? period.profitFactor : pfMax;
-      const y = pfY(Math.min(boundedPf, pfMax));
-      ctx.fillStyle = options.theme.background;
-      ctx.strokeStyle = options.theme.ink;
-      ctx.lineWidth = 2;
+      ctx.fillStyle = period.profitFactor >= 1 ? options.theme.accent : options.theme.loss;
+      ctx.strokeStyle = options.theme.background;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.arc(x, y, 4.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     });
@@ -231,6 +229,16 @@ function chartBounds(values: number[]): { min: number; max: number } {
   if (!finite.length) return { min: -1, max: 1 };
   const magnitude = Math.max(capMax(finite.map(Math.abs)), 1);
   return { min: -magnitude, max: magnitude };
+}
+
+function paddedBounds(values: number[]): { min: number; max: number } {
+  const finite = values.filter(Number.isFinite);
+  if (!finite.length) return { min: -1, max: 1 };
+  const min = Math.min(...finite);
+  const max = Math.max(...finite);
+  const span = Math.max(max - min, Math.abs(max), Math.abs(min), 1);
+  const padding = span * 0.08;
+  return { min: min - padding, max: max + padding };
 }
 
 function capMax(values: number[]): number {
