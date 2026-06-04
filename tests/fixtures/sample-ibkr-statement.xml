@@ -1,0 +1,2 @@
+<AccountInformation accountId="U12345678" />
+<Trade symbol="AAPL" dateTime="2026-01-02" quantity="1" proceeds="100" basis="90" />
