@@ -1,17 +1,36 @@
 :root {
   color-scheme: light;
+  --font-main: "Early Summer Serif", EarlySummer, "EarlySummer", "初夏明朝", "Noto Serif TC", "Noto Serif CJK TC", ui-serif, Georgia, serif;
   --ink: #17211d;
   --muted: #66746e;
   --line: #dce4df;
   --bg: #f3f6f2;
   --panel: #ffffff;
   --panel-2: #eef5f1;
+  --chart-bg: #fbfcfb;
   --accent: #0f8f72;
   --accent-dark: #09624f;
   --win: #119c65;
   --loss: #c54747;
   --gold: #b8860b;
   --shadow: 0 18px 45px rgba(23, 33, 29, 0.08);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #edf4ef;
+  --muted: #a8b8b0;
+  --line: #33453d;
+  --bg: #101613;
+  --panel: #17211d;
+  --panel-2: #1e2b26;
+  --chart-bg: #121a16;
+  --accent: #4ec79d;
+  --accent-dark: #9ce3c7;
+  --win: #54d19c;
+  --loss: #ef7676;
+  --gold: #e0b84d;
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
 }
 
 * {
@@ -30,7 +49,7 @@ body {
     linear-gradient(315deg, rgba(184, 134, 11, 0.11), transparent 30%),
     var(--bg);
   color: var(--ink);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-main);
 }
 
 button,
@@ -56,6 +75,30 @@ select {
 
 .topbar {
   margin-bottom: 22px;
+}
+
+.settings-bar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-bar label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.settings-bar select {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 34px 0 12px;
+  background: var(--panel);
+  color: var(--ink);
 }
 
 .eyebrow {
@@ -112,13 +155,13 @@ h2 {
   padding: 28px;
   border: 1px dashed rgba(15, 143, 114, 0.42);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
   box-shadow: var(--shadow);
 }
 
 .upload-panel.dragging {
   border-color: var(--accent);
-  background: #f8fffb;
+  background: var(--chart-bg);
 }
 
 #fileInput {
@@ -146,7 +189,7 @@ h2 {
   padding: 0 10px;
   border-radius: 999px;
   color: var(--accent-dark);
-  background: #dbf1e9;
+  background: var(--panel-2);
   font-weight: 800;
   font-size: 13px;
 }
@@ -209,6 +252,11 @@ h2 {
   box-shadow: var(--shadow);
 }
 
+:root[data-theme="dark"] .metric-card,
+:root[data-theme="dark"] .panel {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
 .metric-card {
   min-height: 124px;
   padding: 16px;
@@ -252,8 +300,45 @@ h2 {
 
 canvas {
   width: 100%;
+  height: 280px;
   display: block;
   margin-top: 16px;
+}
+
+.chart-canvas {
+  height: 260px;
+}
+
+.panel-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.segmented {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  min-width: 172px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.segmented button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.segmented button.active {
+  background: var(--panel);
+  color: var(--accent-dark);
+  box-shadow: 0 6px 16px rgba(23, 33, 29, 0.08);
 }
 
 .pill {
@@ -282,7 +367,7 @@ canvas {
   padding: 12px;
   border-radius: 8px;
   background: var(--panel-2);
-  border: 1px solid #d8e8df;
+  border: 1px solid var(--line);
 }
 
 .insight strong {
@@ -304,6 +389,10 @@ canvas {
 .table-wrap.compact {
   max-height: 330px;
   border-top: 1px solid var(--line);
+}
+
+.table-wrap.tall {
+  max-height: 430px;
 }
 
 table {
@@ -354,7 +443,7 @@ th {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfcfb;
+  background: var(--chart-bg);
   color: var(--muted);
   line-height: 1.6;
   white-space: pre-wrap;
@@ -379,6 +468,22 @@ th {
   .upload-panel {
     grid-template-columns: 1fr;
     padding: 20px;
+  }
+
+  .topbar,
+  .panel-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .settings-bar,
+  .segmented {
+    width: 100%;
+  }
+
+  .settings-bar label,
+  .settings-bar select {
+    width: 100%;
   }
 
   .primary-action,

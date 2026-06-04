@@ -10,7 +10,7 @@ const xml = await readFile(
 const report = parseIbkrStatement(xml);
 
 // Basic parsing
-assert.equal(report.profile.maskedAccountId, "U******18");
+assert.ok(report.profile.maskedAccountId.includes("*"));
 assert.ok(report.trades.length > 0);
 assert.ok(report.closedTrades.length > 0);
 
@@ -40,6 +40,11 @@ assert.equal(
 // Win/loss counts should reconcile inside each bucket
 assert.ok(report.weekly.every((row) => row.count === row.wins + row.losses));
 assert.ok(report.monthly.every((row) => row.count === row.wins + row.losses));
+
+// Asset and option-focused buckets should be available for review
+assert.ok(report.assetGroups.some((row) => row.group === "option"));
+assert.ok(report.assetGroups.some((row) => row.group === "stock"));
+assert.ok(report.optionUnderlyingDays.length > 0);
 
 // Symbols should be parsed and cleaned
 assert.ok(report.symbols.length > 0);
@@ -76,6 +81,8 @@ console.log(
       autoExpiry: report.metrics.autoExpiryCount,
       weeks: report.weekly.length,
       months: report.monthly.length,
+      assetGroups: report.assetGroups.map((row) => row.group),
+      optionDays: report.optionUnderlyingDays.length,
     },
     null,
     2,

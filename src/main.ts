@@ -1,9 +1,13 @@
 import { parseIbkrStatement } from "./domain/analytics";
 import type { ParsedStatement } from "./domain/types";
-import { type AppElements, renderError, renderReport } from "./ui/render";
+import { localeOptions, normalizeLocale, t, type Locale } from "./ui/i18n";
+import { type AppElements, type PeriodMode, type ThemeMode, renderError, renderReport, translateStaticText } from "./ui/render";
 
 interface AppState {
   report: ParsedStatement | null;
+  locale: Locale;
+  periodMode: PeriodMode;
+  theme: ThemeMode;
 }
 
 declare global {
@@ -14,19 +18,25 @@ declare global {
 
 const state: AppState = {
   report: null,
+  locale: normalizeLocale(localStorage.getItem("ibkr-pnl-locale") || navigator.language),
+  periodMode: (localStorage.getItem("ibkr-pnl-period") as PeriodMode) || "weekly",
+  theme: (localStorage.getItem("ibkr-pnl-theme") as ThemeMode) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
 };
 
 const els = getElements();
+initializePreferences();
 bindEvents();
 
 window.__loadIbkrXmlForTest = (text: string) => {
   state.report = parseIbkrStatement(text);
-  renderReport(els, state.report);
+  renderCurrentReport();
 };
 
 function bindEvents(): void {
   const fileInput = getElement<HTMLInputElement>("fileInput");
   const dropZone = getElement<HTMLElement>("dropZone");
+  const localeSelect = getElement<HTMLSelectElement>("localeSelect");
+  const themeToggle = getElement<HTMLButtonElement>("themeToggle");
 
   fileInput.addEventListener("change", async (event) => {
     const [file] = (event.target as HTMLInputElement).files || [];
@@ -51,17 +61,69 @@ function bindEvents(): void {
     const [file] = event.dataTransfer?.files || [];
     if (file) await readFile(file);
   });
+
+  localeSelect.addEventListener("change", () => {
+    state.locale = normalizeLocale(localeSelect.value);
+    localStorage.setItem("ibkr-pnl-locale", state.locale);
+    applyLocale();
+    renderCurrentReport();
+  });
+
+  themeToggle.addEventListener("click", () => {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    localStorage.setItem("ibkr-pnl-theme", state.theme);
+    applyTheme();
+    renderCurrentReport();
+  });
+
+  for (const button of [els.periodWeekly, els.periodMonthly]) {
+    button.addEventListener("click", () => {
+      state.periodMode = button.dataset.period === "monthly" ? "monthly" : "weekly";
+      localStorage.setItem("ibkr-pnl-period", state.periodMode);
+      renderCurrentReport();
+    });
+  }
 }
 
 async function readFile(file: File): Promise<void> {
   try {
     const text = await file.text();
     state.report = parseIbkrStatement(text);
-    renderReport(els, state.report);
+    renderCurrentReport();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    renderError(els.offlineAdvice, `XML 解析失敗：${message}`);
+    renderError(els.offlineAdvice, `${t(state.locale, "importFailed")}：${message}`);
   }
+}
+
+function initializePreferences(): void {
+  const localeSelect = getElement<HTMLSelectElement>("localeSelect");
+  localeSelect.innerHTML = localeOptions.map((option) => `<option value="${option.code}">${option.label}</option>`).join("");
+  localeSelect.value = state.locale;
+  applyTheme();
+  applyLocale();
+}
+
+function applyTheme(): void {
+  document.documentElement.dataset.theme = state.theme;
+  const themeToggle = getElement<HTMLButtonElement>("themeToggle");
+  themeToggle.textContent = state.theme === "dark" ? t(state.locale, "light") : t(state.locale, "dark");
+  themeToggle.setAttribute("aria-pressed", String(state.theme === "dark"));
+}
+
+function applyLocale(): void {
+  document.documentElement.lang = state.locale;
+  translateStaticText(state.locale);
+  getElement<HTMLButtonElement>("themeToggle").textContent = state.theme === "dark" ? t(state.locale, "light") : t(state.locale, "dark");
+}
+
+function renderCurrentReport(): void {
+  if (!state.report) return;
+  renderReport(els, state.report, {
+    locale: state.locale,
+    periodMode: state.periodMode,
+    theme: state.theme,
+  });
 }
 
 function getElements(): AppElements {
@@ -76,12 +138,16 @@ function getElements(): AppElements {
     tradeCount: getElement("tradeCount"),
     dailyChart: getElement("dailyChart"),
     distributionChart: getElement("distributionChart"),
-    weeklyChart: getElement("weeklyChart"),
-    monthlyChart: getElement("monthlyChart"),
+    periodChart: getElement("periodChart"),
+    periodTitle: getElement("periodTitle"),
+    periodColumnLabel: getElement("periodColumnLabel"),
+    periodWeekly: getElement("periodWeekly"),
+    periodMonthly: getElement("periodMonthly"),
     disciplineList: getElement("disciplineList"),
     bestLoserList: getElement("bestLoserList"),
-    weeklyRows: getElement("weeklyRows"),
-    monthlyRows: getElement("monthlyRows"),
+    periodRows: getElement("periodRows"),
+    assetRows: getElement("assetRows"),
+    optionRows: getElement("optionRows"),
     symbolRows: getElement("symbolRows"),
     offlineAdvice: getElement("offlineAdvice"),
   };

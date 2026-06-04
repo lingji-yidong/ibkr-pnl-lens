@@ -1,6 +1,6 @@
 # IBKR PnL Lens
 
-Fully offline IBKR Flex XML analyzer for profit factor, payoff ratio, realized P/L, option auto-expiry risk, and trade discipline review.
+Fully offline IBKR Flex XML analyzer for profit factor, payoff ratio, realized P/L, option auto-expiry risk, period performance, and trade discipline review.
 
 This project is designed for traders who want a quick, private review of their Interactive Brokers activity data without sending statements, account identifiers, or API keys to any external service.
 
@@ -11,8 +11,10 @@ This project is designed for traders who want a quick, private review of their I
 - Masks account identifiers in the UI.
 - Separates executions from canceled orders when the XML includes order records.
 - Includes option auto-expiry (`Ep`) in closed trade analysis instead of dropping it as noise.
-- Reports profit factor, payoff ratio, win rate, expectancy, commissions, daily realized P/L, symbol impact, and rule-based discipline notes.
-- Built for static hosting on Cloudflare Pages.
+- Reports profit factor, payoff ratio, win rate, expectancy, commissions, daily realized P/L, weekly/monthly period quality, symbol impact, and rule-based discipline notes.
+- Separates stock and option performance, with option review grouped by underlying and trade date.
+- Supports light/dark theme and local UI language switching for Traditional Chinese, Simplified Chinese, English, Japanese, Korean, Spanish, German, French, Russian, and Finnish.
+- Built for static Cloudflare Workers asset deployment with Wrangler.
 
 ## Data Format
 
@@ -41,6 +43,9 @@ The UI masks account identifiers such as `U12345678` into a redacted format. Sti
 - **Payoff Ratio**: Average win divided by average loss.
 - **Expectancy**: Average realized P/L per closed trade.
 - **Auto Expiry**: Option trades with `Ep` notes are included and highlighted.
+- **Period Performance**: Weekly or monthly net realized P/L with profit factor and payoff ratio.
+- **Asset Breakdown**: Stock and option performance are calculated separately.
+- **Option Underlying-Date Review**: Option trades are grouped by underlying and date to expose concentrated wins, losses, and expiry issues.
 
 ## Exporting Flex XML From IBKR
 
@@ -75,7 +80,35 @@ npm run build
 
 The production bundle is written to `dist/`.
 
-## Cloudflare Pages
+## Cloudflare Wrangler Deployment
+
+This repo is configured for Cloudflare Workers static asset deployment:
+
+```toml
+name = "ibkr-pnl-lens"
+compatibility_date = "2026-06-04"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+```
+
+Deploy with:
+
+```bash
+npm run deploy
+```
+
+The script runs `npm run build` first and then `wrangler deploy`.
+
+If you want to preview the built bundle locally before deploying:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Cloudflare Pages Alternative
 
 Cloudflare Pages settings:
 
@@ -83,17 +116,13 @@ Cloudflare Pages settings:
 - Output directory: `dist`
 - Node version: `20`
 
-You can either connect the GitHub repo in Cloudflare Pages or deploy manually with Wrangler:
-
-```bash
-npx wrangler pages deploy dist --project-name ibkr-pnl-lens
-```
+If you still prefer Pages, connect the GitHub repo and use the settings above. The app is a static frontend and does not require a backend worker.
 
 ## GitHub
 
 ```bash
 git add .
-git commit -m "Update README"
+git commit -m "feat: describe your change"
 git push
 ```
 

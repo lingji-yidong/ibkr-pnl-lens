@@ -1,4 +1,5 @@
 export type AssetClass = "股票" | "股票和指數期權" | "現金" | "期貨" | string;
+export type AssetGroup = "stock" | "option" | "other";
 
 export interface StatementProfile {
   accountId: string;
@@ -109,6 +110,36 @@ export interface SymbolSummary {
   average: number;
 }
 
+export interface AssetGroupSummary {
+  group: AssetGroup;
+  label: string;
+  pnl: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+  winRate: number;
+  count: number;
+  wins: number;
+  losses: number;
+  average: number;
+}
+
+export interface OptionUnderlyingDaySummary {
+  underlying: string;
+  day: string;
+  pnl: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+  winRate: number;
+  count: number;
+  wins: number;
+  losses: number;
+  autoExpiryCount: number;
+}
+
 export interface Insight {
   title: string;
   body: string;
@@ -124,6 +155,8 @@ export interface ParsedStatement {
   weekly: PeriodPerformance[];
   monthly: PeriodPerformance[];
   symbols: SymbolSummary[];
+  assetGroups: AssetGroupSummary[];
+  optionUnderlyingDays: OptionUnderlyingDaySummary[];
   discipline: Insight[];
   bestLoserWins: Insight[];
   offlineAdvice: Insight[];

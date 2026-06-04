@@ -10,36 +10,43 @@
     <main class="shell">
       <section class="topbar">
         <div>
-          <p class="eyebrow">IBKR Activity Statement</p>
-          <h1>盈虧比報表分析</h1>
+          <p class="eyebrow" data-i18n="eyebrow">IBKR Activity Statement</p>
+          <h1 data-i18n="title">盈虧比報表分析</h1>
+        </div>
+        <div class="settings-bar" aria-label="Settings">
+          <label>
+            <span data-i18n="language">語言</span>
+            <select id="localeSelect"></select>
+          </label>
+          <button id="themeToggle" class="secondary-action" type="button" aria-pressed="false" data-i18n="dark">深色</button>
         </div>
       </section>
 
       <section class="upload-panel" id="dropZone">
         <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" />
         <div class="upload-copy">
-          <span class="upload-mark">Flex XML</span>
-          <h2>拖入或選擇 IBKR XML</h2>
-          <p>名稱、帳戶、地址會在畫面與本地分析中脫敏。</p>
+          <span class="upload-mark" data-i18n="uploadMark">Flex XML</span>
+          <h2 data-i18n="uploadTitle">拖入或選擇 IBKR XML</h2>
+          <p data-i18n="uploadBody">名稱、帳戶、地址會在畫面與本地分析中脫敏。</p>
         </div>
-        <label class="primary-action" for="fileInput">選擇文件</label>
+        <label class="primary-action" for="fileInput" data-i18n="chooseFile">選擇文件</label>
       </section>
 
       <section class="privacy-strip" id="privacyStrip" hidden>
         <div>
-          <span class="label">帳戶</span>
+          <span class="label" data-i18n="account">帳戶</span>
           <strong id="maskedAccount">--</strong>
         </div>
         <div>
-          <span class="label">名稱</span>
+          <span class="label" data-i18n="name">名稱</span>
           <strong id="maskedName">--</strong>
         </div>
         <div>
-          <span class="label">期間</span>
+          <span class="label" data-i18n="period">期間</span>
           <strong id="period">--</strong>
         </div>
         <div>
-          <span class="label">基礎貨幣</span>
+          <span class="label" data-i18n="baseCurrency">基礎貨幣</span>
           <strong id="baseCurrency">--</strong>
         </div>
       </section>
@@ -50,8 +57,8 @@
         <article class="panel wide">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Equity Curve</p>
-              <h2>每日已實現損益</h2>
+              <p class="eyebrow" data-i18n="equityCurve">Equity Curve</p>
+              <h2 data-i18n="dailyRealized">每日已實現損益</h2>
             </div>
             <span id="tradeCount" class="pill">0 平倉 / 0 成交</span>
           </div>
@@ -61,8 +68,8 @@
         <article class="panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Payoff</p>
-              <h2>贏虧分布</h2>
+              <p class="eyebrow" data-i18n="payoff">Payoff</p>
+              <h2 data-i18n="winLossDistribution">贏虧分布</h2>
             </div>
           </div>
           <canvas id="distributionChart" height="280"></canvas>
@@ -71,24 +78,29 @@
         <article class="panel wide">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Weekly</p>
-              <h2>週度盈虧比成績</h2>
+              <p class="eyebrow" data-i18n="periodPerformance">Period</p>
+              <h2 id="periodTitle">週度盈虧比成績</h2>
+              <p class="panel-note" data-i18n="periodHint">柱狀為淨損益，線條為 PF</p>
+            </div>
+            <div class="segmented" role="group" aria-label="Period range">
+              <button id="periodWeekly" type="button" class="active" data-period="weekly" data-i18n="weekly">週度</button>
+              <button id="periodMonthly" type="button" data-period="monthly" data-i18n="monthly">月度</button>
             </div>
           </div>
-          <canvas id="weeklyChart" height="260"></canvas>
+          <canvas id="periodChart" class="chart-canvas" height="260"></canvas>
           <div class="table-wrap compact">
             <table>
               <thead>
                 <tr>
-                  <th>週期</th>
-                  <th>已實現</th>
-                  <th>PF</th>
-                  <th>盈虧比</th>
-                  <th>勝率</th>
-                  <th>筆數</th>
+                  <th id="periodColumnLabel" data-i18n="periodColumn">週期</th>
+                  <th data-i18n="realized">已實現</th>
+                  <th data-i18n="pf">PF</th>
+                  <th data-i18n="payoffShort">盈虧比</th>
+                  <th data-i18n="winRate">勝率</th>
+                  <th data-i18n="trades">筆數</th>
                 </tr>
               </thead>
-              <tbody id="weeklyRows"></tbody>
+              <tbody id="periodRows"></tbody>
             </table>
           </div>
         </article>
@@ -96,24 +108,50 @@
         <article class="panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Monthly</p>
-              <h2>月度盈虧比成績</h2>
+              <p class="eyebrow" data-i18n="assetBreakdown">Assets</p>
+              <h2 data-i18n="assetBreakdownTitle">股票 / 期權統計</h2>
             </div>
           </div>
-          <canvas id="monthlyChart" height="260"></canvas>
           <div class="table-wrap compact">
             <table>
               <thead>
                 <tr>
-                  <th>月份</th>
-                  <th>已實現</th>
-                  <th>PF</th>
-                  <th>盈虧比</th>
-                  <th>勝率</th>
-                  <th>筆數</th>
+                  <th data-i18n="asset">資產</th>
+                  <th data-i18n="realized">已實現</th>
+                  <th data-i18n="pf">PF</th>
+                  <th data-i18n="payoffShort">盈虧比</th>
+                  <th data-i18n="winRate">勝率</th>
+                  <th data-i18n="average">平均</th>
+                  <th data-i18n="trades">筆數</th>
                 </tr>
               </thead>
-              <tbody id="monthlyRows"></tbody>
+              <tbody id="assetRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel wide">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow" data-i18n="optionReview">Options</p>
+              <h2 data-i18n="optionReviewTitle">期權標的日期復盤</h2>
+            </div>
+          </div>
+          <div class="table-wrap compact tall">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="underlying">標的</th>
+                  <th data-i18n="date">日期</th>
+                  <th data-i18n="realized">已實現</th>
+                  <th data-i18n="pf">PF</th>
+                  <th data-i18n="payoffShort">盈虧比</th>
+                  <th data-i18n="winRate">勝率</th>
+                  <th data-i18n="autoExpiry">自動到期</th>
+                  <th data-i18n="trades">筆數</th>
+                </tr>
+              </thead>
+              <tbody id="optionRows"></tbody>
             </table>
           </div>
         </article>
@@ -121,8 +159,8 @@
         <article class="panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Discipline</p>
-              <h2>紀律風險</h2>
+              <p class="eyebrow" data-i18n="discipline">Discipline</p>
+              <h2 data-i18n="disciplineRisk">紀律風險</h2>
             </div>
           </div>
           <div id="disciplineList" class="insight-list"></div>
@@ -135,20 +173,20 @@
         <article class="panel wide">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Symbols</p>
-              <h2>標的表現</h2>
+              <p class="eyebrow" data-i18n="symbols">Symbols</p>
+              <h2 data-i18n="symbolPerformance">標的表現</h2>
             </div>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>標的</th>
-                  <th>資產</th>
-                  <th>已實現</th>
-                  <th>交易數</th>
-                  <th>勝率</th>
-                  <th>平均盈虧</th>
+                  <th data-i18n="underlying">標的</th>
+                  <th data-i18n="asset">資產</th>
+                  <th data-i18n="realized">已實現</th>
+                  <th data-i18n="trades">交易數</th>
+                  <th data-i18n="winRate">勝率</th>
+                  <th data-i18n="average">平均盈虧</th>
                 </tr>
               </thead>
               <tbody id="symbolRows"></tbody>
@@ -159,8 +197,8 @@
         <article class="panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Offline Coach</p>
-              <h2>離線建議</h2>
+              <p class="eyebrow" data-i18n="offlineCoach">Offline Coach</p>
+              <h2 data-i18n="offlineAdvice">離線建議</h2>
             </div>
           </div>
           <div id="offlineAdvice" class="insight-list"></div>

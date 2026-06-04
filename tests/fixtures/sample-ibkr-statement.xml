@@ -1,2 +1,14 @@
-<AccountInformation accountId="U12345678" />
-<Trade symbol="AAPL" dateTime="2026-01-02" quantity="1" proceeds="100" basis="90" />
+<FlexStatement accountId="U12345678" fromDate="20260101" toDate="20260131">
+  <Trades>
+    <Trade assetCategory="STK" currency="USD" symbol="AAPL" description="AAPL" underlyingSymbol="AAPL" dateTime="20260102;100000" tradeDate="20260102" quantity="10" tradePrice="190" proceeds="1900" ibCommission="-1" cost="1800" fifoPnlRealized="100" mtmPnl="100" openCloseIndicator="C" notes="P" transactionType="Sell" />
+    <Trade assetCategory="STK" currency="USD" symbol="MSFT" description="MSFT" underlyingSymbol="MSFT" dateTime="20260105;100000" tradeDate="20260105" quantity="5" tradePrice="400" proceeds="2000" ibCommission="-1" cost="2040" fifoPnlRealized="-40" mtmPnl="-40" openCloseIndicator="C" notes="L" transactionType="Sell" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPXW  260102P04800000" description="SPXW 02JAN26 4800 P" underlyingSymbol="SPX" dateTime="20260102;150000" tradeDate="20260102" quantity="-1" tradePrice="4" proceeds="400" ibCommission="-1.2" cost="120" fifoPnlRealized="280" mtmPnl="280" openCloseIndicator="C" notes="P" transactionType="Sell" expiry="20260102" putCall="P" strike="4800" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPXW  260109C05000000" description="SPXW 09JAN26 5000 C" underlyingSymbol="SPX" dateTime="20260109;160000" tradeDate="20260109" quantity="1" tradePrice="0" proceeds="0" ibCommission="0" cost="180" fifoPnlRealized="-180" mtmPnl="-180" openCloseIndicator="C" notes="Ep" transactionType="Expire" expiry="20260109" putCall="C" strike="5000" multiplier="100" />
+  </Trades>
+  <Orders>
+    <Order status="Canceled" orderStatus="Canceled" transactionType="Buy" />
+  </Orders>
+  <ClosedLots>
+    <Lot symbol="AAPL" />
+  </ClosedLots>
+</FlexStatement>
