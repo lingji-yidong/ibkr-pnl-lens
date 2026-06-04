@@ -22,7 +22,8 @@ export function drawDailyChart(canvas: HTMLCanvasElement, daily: DailyPnl[], opt
   drawCanvas(canvas, options.theme, ({ ctx, width, height, pad }) => {
     const values = daily.map((row) => row.pnl);
     const cumulative = daily.map((row) => row.cumulative);
-    const { min, max } = paddedBounds([...values, ...cumulative, 0]);
+    const barValues = aggregatePnlValues(values, width, pad);
+    const { min, max } = paddedBounds([...barValues, ...cumulative, 0]);
     const y = scale(min, max, height - pad, pad);
     const step = daily.length > 1 ? (width - pad * 2) / (daily.length - 1) : width - pad * 2;
     const zeroY = y(0);
@@ -30,16 +31,11 @@ export function drawDailyChart(canvas: HTMLCanvasElement, daily: DailyPnl[], opt
     ctx.strokeStyle = options.theme.line;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(pad, zeroY);
-    ctx.lineTo(width - pad, zeroY);
+    ctx.moveTo(pad, crisp(zeroY));
+    ctx.lineTo(width - pad, crisp(zeroY));
     ctx.stroke();
 
-    values.forEach((value, index) => {
-      const x = pad + index * step;
-      const barWidth = Math.max(6, Math.min(18, step * 0.42));
-      ctx.fillStyle = value >= 0 ? options.theme.win : options.theme.loss;
-      ctx.fillRect(x - barWidth / 2, Math.min(zeroY, y(value)), barWidth, Math.abs(y(value) - zeroY) || 2);
-    });
+    drawDensePnlBars(ctx, values, { width, pad, zeroY, y, win: options.theme.win, loss: options.theme.loss });
 
     ctx.strokeStyle = options.theme.ink;
     ctx.lineWidth = 2.5;
@@ -98,7 +94,8 @@ export function drawPeriodPerformanceChart(canvas: HTMLCanvasElement, periods: P
 
     const plotBottom = height - pad - 22;
     const pnlValues = periods.map((period) => period.pnl);
-    const { min: pnlMin, max: pnlMax } = chartBounds(pnlValues);
+    const displayPnlValues = aggregatePnlValues(pnlValues, width, pad);
+    const { min: pnlMin, max: pnlMax } = chartBounds(displayPnlValues);
     const pnlY = scale(pnlMin, pnlMax, plotBottom, pad);
     const finitePf = periods.map((period) => period.profitFactor).filter(Number.isFinite);
     const pfMax = Math.max(capMax(finitePf), 1.25);
@@ -110,26 +107,20 @@ export function drawPeriodPerformanceChart(canvas: HTMLCanvasElement, periods: P
     ctx.strokeStyle = options.theme.line;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(pad, zeroY);
-    ctx.lineTo(width - pad, zeroY);
+    ctx.moveTo(pad, crisp(zeroY));
+    ctx.lineTo(width - pad, crisp(zeroY));
     ctx.stroke();
 
     ctx.save();
     ctx.setLineDash([4, 5]);
     ctx.strokeStyle = options.theme.line;
     ctx.beginPath();
-    ctx.moveTo(pad, pfOneY);
-    ctx.lineTo(width - pad, pfOneY);
+    ctx.moveTo(pad, crisp(pfOneY));
+    ctx.lineTo(width - pad, crisp(pfOneY));
     ctx.stroke();
     ctx.restore();
 
-    periods.forEach((period, index) => {
-      const x = pad + index * step;
-      const barWidth = Math.max(10, Math.min(24, step * 0.46));
-      const y = pnlY(period.pnl);
-      ctx.fillStyle = period.pnl >= 0 ? options.theme.win : options.theme.loss;
-      ctx.fillRect(x - barWidth / 2, Math.min(zeroY, y), barWidth, Math.abs(y - zeroY) || 2);
-    });
+    drawDensePnlBars(ctx, pnlValues, { width, pad, zeroY, y: pnlY, win: options.theme.win, loss: options.theme.loss });
 
     periods.forEach((period, index) => {
       const x = pad + index * step;
@@ -163,9 +154,9 @@ function drawCanvas(
 ): void {
   const ratioValue = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.max(320, rect.width) * ratioValue;
+  canvas.width = Math.round(Math.max(320, rect.width) * ratioValue);
   const cssHeight = Number(canvas.getAttribute("height")) || 260;
-  canvas.height = cssHeight * ratioValue;
+  canvas.height = Math.round(cssHeight * ratioValue);
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   ctx.scale(ratioValue, ratioValue);
@@ -197,9 +188,62 @@ function drawAxisLabels(
   ctx.fillText(legend, width - pad, 18);
 }
 
+function drawDensePnlBars(
+  ctx: CanvasRenderingContext2D,
+  values: number[],
+  {
+    width,
+    pad,
+    zeroY,
+    y,
+    win,
+    loss,
+  }: {
+    width: number;
+    pad: number;
+    zeroY: number;
+    y: (value: number) => number;
+    win: string;
+    loss: string;
+  },
+): void {
+  if (!values.length) return;
+  const chartWidth = width - pad * 2;
+  const buckets = aggregatePnlValues(values, width, pad);
+
+  const step = buckets.length > 1 ? chartWidth / buckets.length : chartWidth;
+  const barWidth = Math.max(1, Math.min(18, step * 0.72));
+
+  buckets.forEach((value, index) => {
+    const x = pad + index * step + step / 2;
+    const barY = y(value);
+    const height = Math.max(1, Math.abs(barY - zeroY));
+    ctx.fillStyle = value >= 0 ? win : loss;
+    ctx.fillRect(Math.round(x - barWidth / 2), Math.min(zeroY, barY), Math.max(1, barWidth), height);
+  });
+}
+
+function aggregatePnlValues(values: number[], width: number, pad: number): number[] {
+  const chartWidth = width - pad * 2;
+  const maxBars = Math.max(24, Math.floor(chartWidth / 3));
+  const bucketSize = Math.max(1, Math.ceil(values.length / maxBars));
+  const buckets: number[] = [];
+
+  for (let index = 0; index < values.length; index += bucketSize) {
+    const bucket = values.slice(index, index + bucketSize);
+    buckets.push(bucket.reduce((total, value) => total + value, 0));
+  }
+
+  return buckets;
+}
+
 function scale(min: number, max: number, outMin: number, outMax: number): (value: number) => number {
   if (min === max) return () => (outMin + outMax) / 2;
   return (value) => outMin + ((value - min) / (max - min)) * (outMax - outMin);
+}
+
+function crisp(value: number): number {
+  return Math.round(value) + 0.5;
 }
 
 function drawPeriodLabels(

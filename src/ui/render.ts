@@ -7,11 +7,20 @@ import { t } from "./i18n";
 
 export type PeriodMode = "weekly" | "monthly";
 export type ThemeMode = "light" | "dark";
+export type SortDirection = "asc" | "desc";
+export type SortTable = "period" | "option" | "symbol";
+
+export interface SortState {
+  table: SortTable;
+  key: string;
+  direction: SortDirection;
+}
 
 export interface RenderOptions {
   locale: Locale;
   periodMode: PeriodMode;
   theme: ThemeMode;
+  sorts: Partial<Record<SortTable, SortState>>;
 }
 
 export interface AppElements {
@@ -79,10 +88,11 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   renderInsights(els.disciplineList, advice.discipline);
   renderInsights(els.bestLoserList, advice.bestLoserWins);
   renderInsights(els.offlineAdvice, advice.offlineAdvice);
-  renderPeriods(els.periodRows, periods, options.periodMode === "weekly" ? 12 : 12);
+  renderPeriods(els.periodRows, sortRows(periods, options.sorts.period), options.periodMode === "weekly" ? 12 : 12, Boolean(options.sorts.period));
   renderAssetGroups(els.assetRows, report.assetGroups, options.locale);
-  renderOptionRows(els.optionRows, report.optionUnderlyingDays, options.locale);
-  renderSymbols(els.symbolRows, report.symbols, options.locale);
+  renderOptionRows(els.optionRows, sortRows(report.optionUnderlyingDays, options.sorts.option), options.locale);
+  renderSymbols(els.symbolRows, sortRows(report.symbols, options.sorts.symbol), options.locale);
+  updateSortButtons(options.sorts);
 }
 
 export function renderError(target: HTMLElement, message: string): void {
@@ -139,8 +149,9 @@ function renderSymbols(target: HTMLElement, symbols: SymbolSummary[], locale: Lo
   }).join("");
 }
 
-function renderPeriods(target: HTMLElement, periods: PeriodPerformance[], limit: number): void {
-  target.innerHTML = periods.slice(-limit).map((row) => {
+function renderPeriods(target: HTMLElement, periods: PeriodPerformance[], limit: number, sorted: boolean): void {
+  const visibleRows = sorted ? periods.slice(0, limit) : periods.slice(-limit);
+  target.innerHTML = visibleRows.map((row) => {
     const tone = row.pnl >= 0 ? "win" : "loss";
     return `
       <tr>
@@ -174,6 +185,37 @@ function renderAssetGroups(target: HTMLElement, rows: AssetGroupSummary[], local
       </article>
     `;
   }).join("");
+}
+
+function sortRows<T extends object>(rows: T[], sort: SortState | undefined): T[] {
+  if (!sort) return rows;
+  const direction = sort.direction === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const left = sortableNumber((a as Record<string, unknown>)[sort.key]);
+    const right = sortableNumber((b as Record<string, unknown>)[sort.key]);
+    if (left === right) return 0;
+    return left > right ? direction : -direction;
+  });
+}
+
+function sortableNumber(value: unknown): number {
+  if (typeof value === "number") {
+    if (value === Infinity) return Number.MAX_SAFE_INTEGER;
+    if (value === -Infinity) return Number.MIN_SAFE_INTEGER;
+    return Number.isFinite(value) ? value : 0;
+  }
+  return 0;
+}
+
+function updateSortButtons(sorts: RenderOptions["sorts"]): void {
+  for (const button of document.querySelectorAll<HTMLButtonElement>(".sort-button")) {
+    const table = button.dataset.sortTable as SortTable | undefined;
+    const key = button.dataset.sortKey;
+    const sort = table ? sorts[table] : undefined;
+    const active = Boolean(sort && sort.key === key);
+    button.classList.toggle("active", active);
+    button.dataset.direction = active ? sort?.direction || "" : "";
+  }
 }
 
 function renderOptionRows(target: HTMLElement, rows: OptionUnderlyingDaySummary[], locale: Locale): void {

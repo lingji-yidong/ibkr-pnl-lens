@@ -1,13 +1,14 @@
 import { parseIbkrStatement } from "./domain/analytics";
 import type { ParsedStatement } from "./domain/types";
 import { localeOptions, normalizeLocale, t, type Locale } from "./ui/i18n";
-import { type AppElements, type PeriodMode, type ThemeMode, renderError, renderReport, translateStaticText } from "./ui/render";
+import { type AppElements, type PeriodMode, type SortDirection, type SortState, type SortTable, type ThemeMode, renderError, renderReport, translateStaticText } from "./ui/render";
 
 interface AppState {
   report: ParsedStatement | null;
   locale: Locale;
   periodMode: PeriodMode;
   theme: ThemeMode;
+  sorts: Partial<Record<SortTable, SortState>>;
 }
 
 declare global {
@@ -21,6 +22,7 @@ const state: AppState = {
   locale: normalizeLocale(localStorage.getItem("ibkr-pnl-locale") || navigator.language),
   periodMode: (localStorage.getItem("ibkr-pnl-period") as PeriodMode) || "weekly",
   theme: (localStorage.getItem("ibkr-pnl-theme") as ThemeMode) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
+  sorts: {},
 };
 
 const els = getElements();
@@ -83,6 +85,21 @@ function bindEvents(): void {
       renderCurrentReport();
     });
   }
+
+  document.addEventListener("click", (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>(".sort-button");
+    if (!button) return;
+    const table = button.dataset.sortTable as SortTable | undefined;
+    const key = button.dataset.sortKey;
+    if (!table || !key) return;
+    const current = state.sorts[table];
+    const direction: SortDirection = current?.key === key && current.direction === "desc" ? "asc" : "desc";
+    state.sorts = {
+      ...state.sorts,
+      [table]: { table, key, direction },
+    };
+    renderCurrentReport();
+  });
 }
 
 async function readFile(file: File): Promise<void> {
@@ -136,6 +153,7 @@ function renderCurrentReport(): void {
     locale: state.locale,
     periodMode: state.periodMode,
     theme: state.theme,
+    sorts: state.sorts,
   });
 }
 

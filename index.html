@@ -96,11 +96,11 @@
               <thead>
                 <tr>
                   <th id="periodColumnLabel" data-i18n="periodColumn">週期</th>
-                  <th data-i18n="realized">已實現</th>
-                  <th data-i18n="pf">PF</th>
-                  <th data-i18n="payoffShort">盈虧比</th>
-                  <th data-i18n="winRate">勝率</th>
-                  <th data-i18n="trades">筆數</th>
+                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="profitFactor" data-i18n="pf">PF</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="payoffRatio" data-i18n="payoffShort">盈虧比</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="count" data-i18n="trades">筆數</button></th>
                 </tr>
               </thead>
               <tbody id="periodRows"></tbody>
@@ -131,12 +131,12 @@
                 <tr>
                   <th data-i18n="underlying">標的</th>
                   <th data-i18n="date">日期</th>
-                  <th data-i18n="realized">已實現</th>
-                  <th data-i18n="pf">PF</th>
-                  <th data-i18n="payoffShort">盈虧比</th>
-                  <th data-i18n="winRate">勝率</th>
-                  <th data-i18n="autoExpiry">自動到期</th>
-                  <th data-i18n="trades">筆數</th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="profitFactor" data-i18n="pf">PF</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="payoffRatio" data-i18n="payoffShort">盈虧比</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="autoExpiryCount" data-i18n="autoExpiry">自動到期</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="count" data-i18n="trades">筆數</button></th>
                 </tr>
               </thead>
               <tbody id="optionRows"></tbody>
@@ -171,10 +171,10 @@
                 <tr>
                   <th data-i18n="underlying">標的</th>
                   <th data-i18n="asset">資產</th>
-                  <th data-i18n="realized">已實現</th>
-                  <th data-i18n="trades">交易數</th>
-                  <th data-i18n="winRate">勝率</th>
-                  <th data-i18n="average">平均盈虧</th>
+                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="count" data-i18n="trades">交易數</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="average" data-i18n="average">平均盈虧</button></th>
                 </tr>
               </thead>
               <tbody id="symbolRows"></tbody>
