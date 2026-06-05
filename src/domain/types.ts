@@ -8,6 +8,17 @@ export interface StatementProfile {
   baseCurrency: string;
 }
 
+export interface StatementAccountSummary {
+  index: number;
+  accountId: string;
+  maskedAccountId: string;
+  period: string;
+  baseCurrency: string;
+  tradeCount: number;
+  orderCount: number;
+  lotCount: number;
+}
+
 export interface FlexTrade {
   assetClass: AssetClass;
   currency: string;
@@ -147,6 +158,8 @@ export interface Insight {
 
 export interface ParsedStatement {
   profile: StatementProfile;
+  accounts: StatementAccountSummary[];
+  selectedAccountIndex: number;
   trades: FlexTrade[];
   closedTrades: ClosedTrade[];
   canceledOrders: FlexOrder[];

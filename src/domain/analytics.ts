@@ -15,8 +15,8 @@ import type {
   SymbolSummary,
 } from "./types";
 
-export function parseIbkrStatement(text: string): ParsedStatement {
-  const flex = parseFlexXml(text);
+export function parseIbkrStatement(text: string, selectedAccountIndex = 0): ParsedStatement {
+  const flex = parseFlexXml(text, selectedAccountIndex);
   const closedTrades = flex.trades.filter(isClosedTrade);
   const canceledOrders = flex.orders.filter(isCanceledOrder);
   const metrics = buildMetrics({
@@ -28,6 +28,8 @@ export function parseIbkrStatement(text: string): ParsedStatement {
 
   return {
     profile: flex.profile,
+    accounts: flex.accounts,
+    selectedAccountIndex: flex.selectedAccountIndex,
     trades: flex.trades,
     closedTrades,
     canceledOrders,

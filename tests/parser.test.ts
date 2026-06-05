@@ -7,12 +7,44 @@ const xml = await readFile(
   "utf8",
 );
 
+const multiAccountXml = `
+<FlexStatements>
+  <FlexStatement accountId="DEMO-A" fromDate="20260101" toDate="20260131">
+    <Trades>
+      <Trade assetCategory="STK" currency="USD" symbol="AAA" description="AAA" underlyingSymbol="AAA" dateTime="20260102;100000" tradeDate="20260102" quantity="1" tradePrice="10" proceeds="10" ibCommission="-1" cost="0" fifoPnlRealized="125" mtmPnl="125" openCloseIndicator="C" notes="P" transactionType="Sell" />
+    </Trades>
+    <Orders>
+      <Order status="Submitted" transactionType="Buy" />
+    </Orders>
+  </FlexStatement>
+  <FlexStatement accountId="DEMO-B" fromDate="20260101" toDate="20260131">
+    <Trades>
+      <Trade assetCategory="STK" currency="USD" symbol="BBB" description="BBB" underlyingSymbol="BBB" dateTime="20260103;100000" tradeDate="20260103" quantity="1" tradePrice="10" proceeds="10" ibCommission="-1" cost="100" fifoPnlRealized="-75" mtmPnl="-75" openCloseIndicator="C" notes="L" transactionType="Sell" />
+    </Trades>
+    <Orders>
+      <Order status="Canceled" transactionType="Buy" />
+    </Orders>
+  </FlexStatement>
+</FlexStatements>
+`;
+
 const report = parseIbkrStatement(xml);
+const multiAccountReport = parseIbkrStatement(multiAccountXml);
+const secondAccountReport = parseIbkrStatement(multiAccountXml, 1);
 
 // Basic parsing
 assert.ok(report.profile.maskedAccountId.includes("*"));
 assert.ok(report.trades.length > 0);
 assert.ok(report.closedTrades.length > 0);
+assert.equal(multiAccountReport.accounts.length, 2);
+assert.equal(multiAccountReport.selectedAccountIndex, 0);
+assert.equal(secondAccountReport.selectedAccountIndex, 1);
+assert.equal(multiAccountReport.trades.length, 1);
+assert.equal(secondAccountReport.trades.length, 1);
+assert.equal(multiAccountReport.metrics.net, 125);
+assert.equal(secondAccountReport.metrics.net, -75);
+assert.equal(multiAccountReport.metrics.canceledOrderCount, 0);
+assert.equal(secondAccountReport.metrics.canceledOrderCount, 1);
 
 // Metrics should be internally valid
 assert.ok(Number.isFinite(report.metrics.net));

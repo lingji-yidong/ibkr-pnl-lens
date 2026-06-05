@@ -1,32 +1,82 @@
-import type { FlexOrder, FlexTrade, StatementProfile } from "./types";
+import type { FlexOrder, FlexTrade, StatementAccountSummary, StatementProfile } from "./types";
 
 export interface FlexXmlParseResult {
   profile: StatementProfile;
+  accounts: StatementAccountSummary[];
+  selectedAccountIndex: number;
   trades: FlexTrade[];
   lots: Record<string, string>[];
   orders: FlexOrder[];
 }
 
-export function parseFlexXml(text: string): FlexXmlParseResult {
+export function parseFlexXml(text: string, selectedAccountIndex = 0): FlexXmlParseResult {
   if (!looksLikeXml(text)) throw new Error("請上傳 IBKR Flex XML 文件。");
 
-  const statementAttrs = parseFirstTagAttrs(text, "FlexStatement");
-  const tradeRows = extractTagAttrs(text, "Trade");
-  const lots = extractTagAttrs(text, "Lot");
-  const orders = extractTagAttrs(text, "Order") as FlexOrder[];
+  const statements = extractStatementBlocks(text);
+  const selected = statements[Math.min(Math.max(selectedAccountIndex, 0), statements.length - 1)] || statements[0] || buildGlobalStatement(text);
+  const tradeRows = extractTagAttrs(selected.content, "Trade");
+  const lots = extractTagAttrs(selected.content, "Lot");
+  const orders = extractTagAttrs(selected.content, "Order") as FlexOrder[];
   const trades = tradeRows.map(normalizeFlexTrade);
-  const accountId = statementAttrs.accountId || "";
+  const accountId = selected.attrs.accountId || "";
 
   return {
     profile: {
       accountId,
       maskedAccountId: maskAccount(accountId),
-      period: formatFlexPeriod(statementAttrs.fromDate, statementAttrs.toDate),
+      period: formatFlexPeriod(selected.attrs.fromDate, selected.attrs.toDate),
       baseCurrency: tradeRows.find((row) => row.currency)?.currency || "USD",
     },
+    accounts: statements.map(statementSummary),
+    selectedAccountIndex: selected.index,
     trades,
     lots,
     orders,
+  };
+}
+
+interface StatementBlock {
+  index: number;
+  attrs: Record<string, string>;
+  content: string;
+}
+
+function extractStatementBlocks(text: string): StatementBlock[] {
+  const pattern = /<FlexStatement\b([^>]*)>([\s\S]*?)<\/FlexStatement>/g;
+  const statements: StatementBlock[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    statements.push({
+      index: statements.length,
+      attrs: parseXmlAttrs(match[1] || ""),
+      content: match[2] || "",
+    });
+  }
+  return statements.length ? statements : [buildGlobalStatement(text)];
+}
+
+function buildGlobalStatement(text: string): StatementBlock {
+  return {
+    index: 0,
+    attrs: parseFirstTagAttrs(text, "FlexStatement"),
+    content: text,
+  };
+}
+
+function statementSummary(statement: StatementBlock): StatementAccountSummary {
+  const tradeRows = extractTagAttrs(statement.content, "Trade");
+  const orders = extractTagAttrs(statement.content, "Order");
+  const lots = extractTagAttrs(statement.content, "Lot");
+  const accountId = statement.attrs.accountId || "";
+  return {
+    index: statement.index,
+    accountId,
+    maskedAccountId: maskAccount(accountId),
+    period: formatFlexPeriod(statement.attrs.fromDate, statement.attrs.toDate),
+    baseCurrency: tradeRows.find((row) => row.currency)?.currency || "USD",
+    tradeCount: tradeRows.length,
+    orderCount: orders.length,
+    lotCount: lots.length,
   };
 }
 

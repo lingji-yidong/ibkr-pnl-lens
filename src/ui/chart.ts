@@ -1,4 +1,4 @@
-import { money, ratio } from "../domain/format";
+import { money } from "../domain/format";
 import type { ClosedTrade, DailyPnl, PeriodPerformance } from "../domain/types";
 import type { Locale } from "./i18n";
 import { t } from "./i18n";
@@ -11,6 +11,7 @@ interface ChartTheme {
   win: string;
   loss: string;
   accent: string;
+  accentSoft: string;
 }
 
 interface ChartOptions {
@@ -92,17 +93,14 @@ export function drawPeriodPerformanceChart(canvas: HTMLCanvasElement, periods: P
       return;
     }
 
-    const plotBottom = height - pad - 22;
+    const plotTop = pad + 18;
+    const plotBottom = height - pad - 38;
     const pnlValues = periods.map((period) => period.pnl);
     const displayPnlValues = aggregatePnlValues(pnlValues, width, pad);
     const { min: pnlMin, max: pnlMax } = chartBounds(displayPnlValues);
-    const pnlY = scale(pnlMin, pnlMax, plotBottom, pad);
-    const finitePf = periods.map((period) => period.profitFactor).filter(Number.isFinite);
-    const pfMax = Math.max(capMax(finitePf), 1.25);
-    const pfY = scale(0, pfMax, plotBottom, pad);
+    const pnlY = scale(pnlMin, pnlMax, plotBottom, plotTop);
     const step = periods.length > 1 ? (width - pad * 2) / (periods.length - 1) : width - pad * 2;
     const zeroY = pnlY(0);
-    const pfOneY = pfY(Math.min(1, pfMax));
 
     ctx.strokeStyle = options.theme.line;
     ctx.lineWidth = 1;
@@ -111,37 +109,15 @@ export function drawPeriodPerformanceChart(canvas: HTMLCanvasElement, periods: P
     ctx.lineTo(width - pad, crisp(zeroY));
     ctx.stroke();
 
-    ctx.save();
-    ctx.setLineDash([4, 5]);
-    ctx.strokeStyle = options.theme.line;
-    ctx.beginPath();
-    ctx.moveTo(pad, crisp(pfOneY));
-    ctx.lineTo(width - pad, crisp(pfOneY));
-    ctx.stroke();
-    ctx.restore();
-
     drawDensePnlBars(ctx, pnlValues, { width, pad, zeroY, y: pnlY, win: options.theme.win, loss: options.theme.loss });
-
-    periods.forEach((period, index) => {
-      const x = pad + index * step;
-      const boundedPf = Number.isFinite(period.profitFactor) ? period.profitFactor : pfMax;
-      const y = pfY(Math.min(boundedPf, pfMax));
-      ctx.fillStyle = period.profitFactor >= 1 ? options.theme.accent : options.theme.loss;
-      ctx.strokeStyle = options.theme.background;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(x, y, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    });
 
     ctx.fillStyle = options.theme.muted;
     ctx.font = "12px system-ui";
     ctx.textAlign = "left";
     ctx.fillText(money(pnlMax), pad, 18);
-    ctx.fillText(money(pnlMin), pad, height - 8);
+    ctx.fillText(money(pnlMin), pad, height - 10);
     ctx.textAlign = "right";
-    ctx.fillText(`${t(options.locale, "periodChartLegend")} ${ratio(pfMax)}`, width - pad, 18);
+    ctx.fillText(t(options.locale, "realized"), width - pad, 18);
 
     drawPeriodLabels(ctx, periods, { width, height, pad, step, options });
   });
@@ -171,7 +147,7 @@ function drawCanvas(
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = theme.background;
   ctx.fillRect(0, 0, width, height);
-  painter({ ctx, width, height, pad: 38 });
+  painter({ ctx, width, height, pad: 46 });
 }
 
 function drawEmptyState(ctx: CanvasRenderingContext2D, width: number, height: number, text: string, options: ChartOptions): void {
@@ -225,7 +201,7 @@ function drawDensePnlBars(
     const barY = y(value);
     const height = Math.max(1, Math.abs(barY - zeroY));
     ctx.fillStyle = value >= 0 ? win : loss;
-    ctx.fillRect(Math.round(x - barWidth / 2), Math.min(zeroY, barY), Math.max(1, barWidth), height);
+    ctx.fillRect(Math.round(x - barWidth / 2), Math.round(Math.min(zeroY, barY)), Math.max(1, barWidth), Math.max(1, Math.round(height)));
   });
 }
 
@@ -259,13 +235,14 @@ function drawPeriodLabels(
 ): void {
   const maxLabels = width < 620 ? 4 : 7;
   const interval = Math.max(1, Math.ceil(periods.length / maxLabels));
+  const labelY = height - 28;
   ctx.fillStyle = options.theme.muted;
   ctx.font = "11px system-ui";
   ctx.textAlign = "center";
   periods.forEach((period, index) => {
     if (index % interval !== 0 && index !== periods.length - 1) return;
     const x = pad + index * step;
-    ctx.fillText(shortPeriodLabel(period.label), x, height - 24);
+    ctx.fillText(shortPeriodLabel(period.label), x, labelY);
   });
 }
 

@@ -26,6 +26,7 @@ export interface RenderOptions {
 export interface AppElements {
   privacyStrip: HTMLElement;
   maskedAccount: HTMLElement;
+  accountSelect: HTMLSelectElement;
   maskedName: HTMLElement;
   period: HTMLElement;
   baseCurrency: HTMLElement;
@@ -55,20 +56,21 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   els.workspace.hidden = false;
 
   els.maskedAccount.textContent = profile.maskedAccountId || "--";
+  renderAccountPicker(els, report);
   els.maskedName.textContent = t(options.locale, "neutralName");
   els.period.textContent = profile.period || "--";
   els.baseCurrency.textContent = profile.baseCurrency || "USD";
   els.tradeCount.textContent = `${metrics.closedCount} ${t(options.locale, "closed")} / ${metrics.executionCount} ${t(options.locale, "executions")}`;
 
   els.metricsGrid.innerHTML = metricCards([
-    [t(options.locale, "netRealized"), money(metrics.net), t(options.locale, "closedTradeSum")],
-    [t(options.locale, "profitFactor"), ratio(metrics.profitFactor), t(options.locale, "grossProfitLoss")],
+    [t(options.locale, "netRealized"), money(metrics.net), t(options.locale, "closedTradeSum"), pnlTone(metrics.net), statusLabel(options.locale, metrics.net)],
+    [t(options.locale, "profitFactor"), ratio(metrics.profitFactor), t(options.locale, "grossProfitLoss"), thresholdTone(metrics.profitFactor), thresholdStatusLabel(options.locale, metrics.profitFactor)],
     [t(options.locale, "winRate"), percent(metrics.winRate), `${metrics.winCount} / ${metrics.lossCount}`],
-    [t(options.locale, "payoffRatio"), ratio(metrics.payoffRatio), t(options.locale, "averageWinLoss")],
-    [t(options.locale, "expectancy"), money(metrics.expectancy), t(options.locale, "perClosedTrade")],
+    [t(options.locale, "payoffRatio"), ratio(metrics.payoffRatio), t(options.locale, "averageWinLoss"), thresholdTone(metrics.payoffRatio), thresholdStatusLabel(options.locale, metrics.payoffRatio)],
+    [t(options.locale, "expectancy"), money(metrics.expectancy), t(options.locale, "perClosedTrade"), pnlTone(metrics.expectancy), statusLabel(options.locale, metrics.expectancy)],
     [t(options.locale, "executionRecords"), String(metrics.executionCount), t(options.locale, "flexTradeRecords")],
     [t(options.locale, "canceledOrders"), String(metrics.canceledOrderCount), metrics.canceledOrderCount ? t(options.locale, "flexCanceledRecords") : t(options.locale, "noCanceledRecords")],
-    [t(options.locale, "commissionDrag"), money(metrics.commissions), `${metrics.executionCount} ${t(options.locale, "executions")}`],
+    [t(options.locale, "commissionDrag"), money(metrics.commissions), `${metrics.executionCount} ${t(options.locale, "executions")}`, "loss", t(options.locale, "costStatus")],
   ]);
 
   const chartOptions = { locale: options.locale, theme: cssChartTheme() };
@@ -81,16 +83,31 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   renderInsights(els.bestLoserList, advice.bestLoserWins);
   renderInsights(els.offlineAdvice, advice.offlineAdvice);
   renderAssetGroups(els.assetRows, report.assetGroups, options.locale);
-  renderOptionRows(els.optionRows, sortRows(report.optionUnderlyingDays, options.sorts.option), options.locale);
+  renderOptionRows(els.optionRows, report.optionUnderlyingDays, options.locale, options.sorts.option);
   renderSymbols(els.symbolRows, sortRows(report.symbols, options.sorts.symbol), options.locale);
   updateSortButtons(options.sorts);
+}
+
+function renderAccountPicker(els: AppElements, report: ParsedStatement): void {
+  const hasMultipleAccounts = report.accounts.length > 1;
+  els.maskedAccount.hidden = hasMultipleAccounts;
+  els.accountSelect.hidden = !hasMultipleAccounts;
+  if (!hasMultipleAccounts) return;
+
+  els.accountSelect.innerHTML = report.accounts
+    .map((account) => {
+      const selected = account.index === report.selectedAccountIndex ? " selected" : "";
+      const label = `${account.maskedAccountId || "--"} · ${account.tradeCount} trades`;
+      return `<option value="${account.index}"${selected}>${escapeHtml(label)}</option>`;
+    })
+    .join("");
 }
 
 export function renderPeriodSection(els: AppElements, report: ParsedStatement, options: RenderOptions): void {
   const periods = options.periodMode === "weekly" ? report.weekly : report.monthly;
   els.periodTitle.textContent = options.periodMode === "weekly"
-    ? `${t(options.locale, "weekly")} ${t(options.locale, "payoffRatio")}`
-    : `${t(options.locale, "monthly")} ${t(options.locale, "payoffRatio")}`;
+    ? `${t(options.locale, "weekly")} ${t(options.locale, "realized")}`
+    : `${t(options.locale, "monthly")} ${t(options.locale, "realized")}`;
   els.periodColumnLabel.textContent = options.periodMode === "weekly" ? t(options.locale, "periodColumn") : t(options.locale, "monthColumn");
   els.periodWeekly.classList.toggle("active", options.periodMode === "weekly");
   els.periodMonthly.classList.toggle("active", options.periodMode === "monthly");
@@ -115,16 +132,43 @@ export function translateStaticText(locale: Locale): void {
   }
 }
 
-function metricCards(cards: Array<[string, string, string]>): string {
+type MetricTone = "win" | "loss" | "neutral";
+
+function metricCards(cards: Array<[string, string, string, MetricTone?, string?]>): string {
   return cards
-    .map(([label, value, note]) => `
-      <article class="metric-card">
+    .map(([label, value, note, tone = "neutral", status]) => `
+      <article class="metric-card ${tone}">
         <span>${escapeHtml(label)}</span>
-        <strong>${escapeHtml(value)}</strong>
+        <strong class="${tone}">${escapeHtml(value)}</strong>
         <small>${escapeHtml(note)}</small>
+        ${status ? `<em>${escapeHtml(status)}</em>` : ""}
       </article>
     `)
     .join("");
+}
+
+function pnlTone(value: number): MetricTone {
+  if (value > 0) return "win";
+  if (value < 0) return "loss";
+  return "neutral";
+}
+
+function thresholdTone(value: number): MetricTone {
+  if (value >= 1) return "win";
+  if (value > 0) return "loss";
+  return "neutral";
+}
+
+function statusLabel(locale: Locale, value: number): string {
+  if (value > 0) return t(locale, "profitStatus");
+  if (value < 0) return t(locale, "lossStatus");
+  return t(locale, "flatStatus");
+}
+
+function thresholdStatusLabel(locale: Locale, value: number): string {
+  if (value >= 1) return t(locale, "profitStatus");
+  if (value > 0) return t(locale, "lossStatus");
+  return t(locale, "flatStatus");
 }
 
 function renderInsights(target: HTMLElement, items: Insight[]): void {
@@ -196,19 +240,24 @@ function sortRows<T extends object>(rows: T[], sort: SortState | undefined): T[]
   if (!sort) return rows;
   const direction = sort.direction === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
-    const left = sortableNumber((a as Record<string, unknown>)[sort.key]);
-    const right = sortableNumber((b as Record<string, unknown>)[sort.key]);
+    const left = sortableValue((a as Record<string, unknown>)[sort.key]);
+    const right = sortableValue((b as Record<string, unknown>)[sort.key]);
+    if (typeof left === "string" || typeof right === "string") {
+      const compared = String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" });
+      return compared * direction;
+    }
     if (left === right) return 0;
     return left > right ? direction : -direction;
   });
 }
 
-function sortableNumber(value: unknown): number {
+function sortableValue(value: unknown): string | number {
   if (typeof value === "number") {
     if (value === Infinity) return Number.MAX_SAFE_INTEGER;
     if (value === -Infinity) return Number.MIN_SAFE_INTEGER;
     return Number.isFinite(value) ? value : 0;
   }
+  if (typeof value === "string") return value;
   return 0;
 }
 
@@ -223,25 +272,106 @@ function updateSortButtons(sorts: RenderOptions["sorts"]): void {
   }
 }
 
-function renderOptionRows(target: HTMLElement, rows: OptionUnderlyingDaySummary[], locale: Locale): void {
-  target.innerHTML = rows.slice(0, 24).map((row) => {
+interface OptionUnderlyingSummary {
+  underlying: string;
+  day: string;
+  pnl: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+  winRate: number;
+  average: number;
+  count: number;
+  wins: number;
+  losses: number;
+  autoExpiryCount: number;
+  details: OptionUnderlyingDaySummary[];
+}
+
+function renderOptionRows(target: HTMLElement, rows: OptionUnderlyingDaySummary[], locale: Locale, sort: SortState | undefined): void {
+  const summaries = sortRows(buildOptionUnderlyingSummaries(rows), sort);
+  target.innerHTML = summaries.slice(0, 18).map((summary, index) => {
+    const detailRows = sortRows(summary.details, sort?.key === "day" ? sort : undefined);
+    const groupKey = `option-${index}`;
+    return [renderOptionSummaryRow(summary, groupKey, locale), ...detailRows.map((row) => renderOptionDetailRow(row, groupKey))].join("");
+  }).join("");
+  if (!rows.length) {
+    target.innerHTML = `<tr><td colspan="9">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
+  }
+}
+
+function renderOptionSummaryRow(row: OptionUnderlyingSummary, groupKey: string, locale: Locale): string {
+  const tone = row.pnl >= 0 ? "win" : "loss";
+  return `
+    <tr class="group-row">
+      <td>
+        <span class="option-underlying">
+          <button class="collapse-button" type="button" data-option-group="${escapeHtml(groupKey)}" aria-expanded="false" aria-label="Toggle details">+</button>
+          <span class="option-symbol">${escapeHtml(row.underlying)}</span>
+        </span>
+      </td>
+      <td>${row.details.length}${escapeHtml(t(locale, "daysShort"))}</td>
+      <td class="num ${tone}">${money(row.pnl)}</td>
+      <td class="num">${ratio(row.profitFactor)}</td>
+      <td class="num">${ratio(row.payoffRatio)}</td>
+      <td class="num">${percent(row.winRate)}</td>
+      <td class="num ${tone}">${money(row.average)}</td>
+      <td class="num">${row.autoExpiryCount}</td>
+      <td class="num">${row.count}</td>
+    </tr>
+  `;
+}
+
+function renderOptionDetailRow(row: OptionUnderlyingDaySummary, groupKey: string): string {
     const tone = row.pnl >= 0 ? "win" : "loss";
     return `
-      <tr>
-        <td>${escapeHtml(row.underlying)}</td>
+      <tr class="detail-row" data-option-group="${escapeHtml(groupKey)}" hidden>
+        <td></td>
         <td>${escapeHtml(row.day)}</td>
         <td class="num ${tone}">${money(row.pnl)}</td>
         <td class="num">${ratio(row.profitFactor)}</td>
         <td class="num">${ratio(row.payoffRatio)}</td>
         <td class="num">${percent(row.winRate)}</td>
+        <td class="num ${tone}">${money(row.count ? row.pnl / row.count : 0)}</td>
         <td class="num">${row.autoExpiryCount}</td>
         <td class="num">${row.count}</td>
       </tr>
     `;
-  }).join("");
-  if (!rows.length) {
-    target.innerHTML = `<tr><td colspan="8">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
+}
+
+function buildOptionUnderlyingSummaries(rows: OptionUnderlyingDaySummary[]): OptionUnderlyingSummary[] {
+  const groups = new Map<string, OptionUnderlyingDaySummary[]>();
+  for (const row of rows) {
+    groups.set(row.underlying, [...(groups.get(row.underlying) || []), row]);
   }
+
+  return [...groups.entries()].map(([underlying, details]) => {
+    const pnl = details.reduce((total, row) => total + row.pnl, 0);
+    const grossProfit = details.reduce((total, row) => total + row.grossProfit, 0);
+    const grossLoss = details.reduce((total, row) => total + row.grossLoss, 0);
+    const wins = details.reduce((total, row) => total + row.wins, 0);
+    const losses = details.reduce((total, row) => total + row.losses, 0);
+    const count = details.reduce((total, row) => total + row.count, 0);
+    const avgWin = wins ? grossProfit / wins : 0;
+    const avgLoss = losses ? grossLoss / losses : 0;
+    return {
+      underlying,
+      day: String(details.length),
+      pnl,
+      grossProfit,
+      grossLoss,
+      profitFactor: grossLoss ? grossProfit / grossLoss : grossProfit ? Infinity : 0,
+      payoffRatio: avgLoss ? avgWin / avgLoss : avgWin ? Infinity : 0,
+      winRate: count ? wins / count : 0,
+      average: count ? pnl / count : 0,
+      count,
+      wins,
+      losses,
+      autoExpiryCount: details.reduce((total, row) => total + row.autoExpiryCount, 0),
+      details: [...details].sort((a, b) => a.day.localeCompare(b.day)),
+    };
+  });
 }
 
 function assetGroupName(group: AssetGroup, locale: Locale): string {
@@ -266,5 +396,6 @@ function cssChartTheme() {
     win: styles.getPropertyValue("--win").trim() || "#119c65",
     loss: styles.getPropertyValue("--loss").trim() || "#c54747",
     accent: styles.getPropertyValue("--accent").trim() || "#0f8f72",
+    accentSoft: styles.getPropertyValue("--accent-soft").trim() || "#9bcbbb",
   };
 }

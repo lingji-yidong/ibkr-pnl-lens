@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <div id="fileModeNotice" class="file-mode-notice" hidden>
+      請用本地伺服器開啟此工具：執行 npm run dev 後前往 http://127.0.0.1:5173/。直接開 index.html 時上傳與主題切換不會啟動。
+    </div>
     <main class="shell">
       <section class="topbar">
         <div>
@@ -39,6 +42,7 @@
         <div>
           <span class="label" data-i18n="account">帳戶</span>
           <strong id="maskedAccount">--</strong>
+          <select id="accountSelect" class="account-select" hidden></select>
         </div>
         <div>
           <span class="label" data-i18n="name">名稱</span>
@@ -83,7 +87,7 @@
             <div>
               <p class="eyebrow" data-i18n="periodPerformance">Period</p>
               <h2 id="periodTitle">週度盈虧比成績</h2>
-              <p class="panel-note" data-i18n="periodHint">柱狀為淨損益，線條為 PF</p>
+              <p class="panel-note" data-i18n="periodHint">綠柱為盈利，紅柱為虧損；PF 與盈虧比請看下方表格。</p>
             </div>
             <div class="segmented" role="group" aria-label="Period range">
               <button id="periodWeekly" type="button" class="active" data-period="weekly" data-i18n="weekly">週度</button>
@@ -129,12 +133,13 @@
             <table>
               <thead>
                 <tr>
-                  <th data-i18n="underlying">標的</th>
-                  <th data-i18n="date">日期</th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="underlying" data-i18n="underlying">標的</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="day" data-i18n="dateCount">日期數</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="profitFactor" data-i18n="pf">PF</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="payoffRatio" data-i18n="payoffShort">盈虧比</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="average" data-i18n="average">平均盈虧</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="autoExpiryCount" data-i18n="autoExpiry">自動到期</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="count" data-i18n="trades">筆數</button></th>
                 </tr>
@@ -153,7 +158,7 @@
           </div>
           <div id="disciplineList" class="insight-list"></div>
           <div class="philosophy-block">
-            <p class="eyebrow">Best Loser Wins</p>
+            <p class="eyebrow" data-i18n="bestLoserWins">Best Loser Wins</p>
             <div id="bestLoserList" class="insight-list"></div>
           </div>
         </article>
@@ -169,8 +174,8 @@
             <table>
               <thead>
                 <tr>
-                  <th data-i18n="underlying">標的</th>
-                  <th data-i18n="asset">資產</th>
+                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="symbol" data-i18n="underlying">標的</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="assetClass" data-i18n="asset">資產</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="count" data-i18n="trades">交易數</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
@@ -195,5 +200,10 @@
     </main>
 
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      if (location.protocol === "file:") {
+        document.getElementById("fileModeNotice")?.removeAttribute("hidden");
+      }
+    </script>
   </body>
 </html>

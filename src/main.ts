@@ -5,6 +5,8 @@ import { type AppElements, type PeriodMode, type SortDirection, type SortState, 
 
 interface AppState {
   report: ParsedStatement | null;
+  sourceXml: string | null;
+  selectedAccountIndex: number;
   locale: Locale;
   periodMode: PeriodMode;
   theme: ThemeMode;
@@ -19,6 +21,8 @@ declare global {
 
 const state: AppState = {
   report: null,
+  sourceXml: null,
+  selectedAccountIndex: 0,
   locale: normalizeLocale(localStorage.getItem("ibkr-pnl-locale") || navigator.language),
   periodMode: (localStorage.getItem("ibkr-pnl-period") as PeriodMode) || "weekly",
   theme: (localStorage.getItem("ibkr-pnl-theme") as ThemeMode) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
@@ -30,7 +34,9 @@ initializePreferences();
 bindEvents();
 
 window.__loadIbkrXmlForTest = (text: string) => {
-  state.report = parseIbkrStatement(text);
+  state.sourceXml = text;
+  state.selectedAccountIndex = 0;
+  state.report = parseIbkrStatement(text, state.selectedAccountIndex);
   renderCurrentReport();
 };
 
@@ -39,6 +45,7 @@ function bindEvents(): void {
   const dropZone = getElement<HTMLElement>("dropZone");
   const localeSelect = getElement<HTMLSelectElement>("localeSelect");
   const themeToggle = getElement<HTMLButtonElement>("themeToggle");
+  const accountSelect = getElement<HTMLSelectElement>("accountSelect");
 
   fileInput.addEventListener("change", async (event) => {
     const [file] = (event.target as HTMLInputElement).files || [];
@@ -71,6 +78,13 @@ function bindEvents(): void {
     renderCurrentReport();
   });
 
+  accountSelect.addEventListener("change", () => {
+    if (!state.sourceXml) return;
+    state.selectedAccountIndex = Number(accountSelect.value) || 0;
+    state.report = parseIbkrStatement(state.sourceXml, state.selectedAccountIndex);
+    renderCurrentReport();
+  });
+
   themeToggle.addEventListener("click", () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
     localStorage.setItem("ibkr-pnl-theme", state.theme);
@@ -87,6 +101,19 @@ function bindEvents(): void {
   }
 
   document.addEventListener("click", (event) => {
+    const collapseButton = (event.target as Element).closest<HTMLButtonElement>(".collapse-button");
+    if (collapseButton) {
+      const group = collapseButton.dataset.optionGroup;
+      if (!group) return;
+      const expanded = collapseButton.getAttribute("aria-expanded") === "true";
+      collapseButton.setAttribute("aria-expanded", String(!expanded));
+      collapseButton.textContent = expanded ? "+" : "-";
+      for (const row of document.querySelectorAll<HTMLTableRowElement>(`.detail-row[data-option-group="${CSS.escape(group)}"]`)) {
+        row.hidden = expanded;
+      }
+      return;
+    }
+
     const button = (event.target as Element).closest<HTMLButtonElement>(".sort-button");
     if (!button) return;
     const table = button.dataset.sortTable as SortTable | undefined;
@@ -106,7 +133,9 @@ function bindEvents(): void {
 async function readFile(file: File): Promise<void> {
   try {
     const text = await file.text();
-    state.report = parseIbkrStatement(text);
+    state.sourceXml = text;
+    state.selectedAccountIndex = 0;
+    state.report = parseIbkrStatement(text, state.selectedAccountIndex);
     renderCurrentReport();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -136,8 +165,10 @@ function applyLocale(): void {
   document.documentElement.lang = state.locale;
   translateStaticText(state.locale);
   const localeSelect = getElement<HTMLSelectElement>("localeSelect");
-  localeSelect.title = t(state.locale, "language");
-  localeSelect.setAttribute("aria-label", t(state.locale, "language"));
+  const currentLocale = localeOptions.find((option) => option.code === state.locale)?.label || state.locale;
+  const languageLabel = `${t(state.locale, "language")}: ${currentLocale}`;
+  localeSelect.title = languageLabel;
+  localeSelect.setAttribute("aria-label", languageLabel);
   applyTheme();
 }
 
@@ -172,6 +203,7 @@ function getElements(): AppElements {
   return {
     privacyStrip: getElement("privacyStrip"),
     maskedAccount: getElement("maskedAccount"),
+    accountSelect: getElement("accountSelect"),
     maskedName: getElement("maskedName"),
     period: getElement("period"),
     baseCurrency: getElement("baseCurrency"),
