@@ -8,189 +8,586 @@ export interface AdviceBundle {
   offlineAdvice: Insight[];
 }
 
-export function buildLocalizedAdvice(report: ParsedStatement, locale: Locale): AdviceBundle {
+type SupportedLocale = "zh-Hant" | "zh-Hans" | "en";
+
+type AdviceGroup = keyof AdviceBundle;
+
+type Severity = "info" | "warning" | "danger";
+
+interface AdviceSignal<T = Record<string, unknown>> {
+  id: string;
+  group: AdviceGroup;
+  severity: Severity;
+  data: T;
+}
+
+interface AdviceContext {
+  report: ParsedStatement;
+  metrics: ParsedStatement["metrics"];
+  option?: ParsedStatement["assetGroups"][number];
+  stock?: ParsedStatement["assetGroups"][number];
+
+  closedTradeCount: number;
+  autoExpiryLossCount: number;
+
+  largeLossThreshold: number;
+  largeLossCount: number;
+
+  overTradeLossDayCount: number;
+  weakOptionUnderlyingDays: ParsedStatement["optionUnderlyingDays"];
+}
+
+export function buildLocalizedAdvice(
+  report: ParsedStatement,
+  locale: Locale,
+): AdviceBundle {
+  const supportedLocale = normalizeLocale(locale);
+  const context = buildAdviceContext(report);
+  const signals = buildAdviceSignals(context);
+
+  return renderAdviceBundle(signals, supportedLocale);
+}
+
+function normalizeLocale(locale: Locale): SupportedLocale {
+  if (locale === "zh-Hant" || locale === "zh-Hans") return locale;
+  return "en";
+}
+
+function buildAdviceContext(report: ParsedStatement): AdviceContext {
   const { metrics } = report;
+
   const option = report.assetGroups.find((row) => row.group === "option");
   const stock = report.assetGroups.find((row) => row.group === "stock");
-  const autoExpiryLosses = report.closedTrades.filter((trade) => trade.autoExpiry && trade.realizedPnl < 0);
-  const largeLossThreshold = Math.max(100, metrics.avgWin);
-  const largeLosses = report.closedTrades.filter((trade) => trade.realizedPnl < -largeLossThreshold);
-  const overTradeDays = report.daily.filter((day) => day.count >= 6 && day.pnl < 0);
 
-  if (locale !== "zh-Hant" && locale !== "zh-Hans") {
-    return buildEnglishFallback(report);
+  const closedTrades = report.closedTrades ?? [];
+  const daily = report.daily ?? [];
+  const optionUnderlyingDays = report.optionUnderlyingDays ?? [];
+
+  const avgWin = safePositive(metrics.avgWin);
+  const largeLossThreshold = Math.max(100, avgWin);
+
+  const autoExpiryLossCount = closedTrades.filter(
+    (trade) => trade.autoExpiry && safeNumber(trade.realizedPnl) < 0,
+  ).length;
+
+  const largeLossCount = closedTrades.filter(
+    (trade) => safeNumber(trade.realizedPnl) < -largeLossThreshold,
+  ).length;
+
+  const overTradeLossDayCount = daily.filter(
+    (day) => safeNumber(day.count) >= 6 && safeNumber(day.pnl) < 0,
+  ).length;
+
+  const weakOptionUnderlyingDays = optionUnderlyingDays
+    .filter(
+      (row) => safeNumber(row.count) >= 3 && safeNumber(row.profitFactor) < 1,
+    )
+    .slice(0, 2);
+
+  return {
+    report,
+    metrics,
+    option,
+    stock,
+    closedTradeCount: closedTrades.length,
+    autoExpiryLossCount,
+    largeLossThreshold,
+    largeLossCount,
+    overTradeLossDayCount,
+    weakOptionUnderlyingDays,
+  };
+}
+
+function buildAdviceSignals(context: AdviceContext): AdviceSignal[] {
+  const signals: AdviceSignal[] = [];
+
+  signals.push(buildProfitFactorSignal(context));
+
+  const payoffSignal = buildPayoffSignal(context);
+  if (payoffSignal) signals.push(payoffSignal);
+
+  if (context.overTradeLossDayCount > 0) {
+    signals.push({
+      id: "overtrade_loss_days",
+      group: "discipline",
+      severity: "warning",
+      data: {
+        days: context.overTradeLossDayCount,
+      },
+    });
   }
 
-  const discipline: Insight[] = [];
-  if (metrics.profitFactor < 1) {
-    discipline.push({
-      title: "PF 低於 1，先處理虧損尾巴",
-      body: `目前 PF ${ratio(metrics.profitFactor)}，代表總盈利還蓋不住總虧損。下一步優先降低單筆大虧與到期歸零，而不是增加交易次數。`,
-    });
-  } else if (metrics.profitFactor < 1.5) {
-    discipline.push({
-      title: "PF 有基礎，但容錯不高",
-      body: `目前 PF ${ratio(metrics.profitFactor)}。這類狀態最怕一兩筆失控虧損吃掉整段成果，適合加強單日最大虧損與最晚離場規則。`,
-    });
-  } else {
-    discipline.push({
-      title: "PF 結構相對健康",
-      body: `目前 PF ${ratio(metrics.profitFactor)}，可以開始檢查哪些標的與時段最穩，保留高品質交易而不是盲目放大頻率。`,
+  if (context.autoExpiryLossCount > 0) {
+    signals.push({
+      id: "auto_expiry_losses",
+      group: "discipline",
+      severity: "warning",
+      data: {
+        count: context.autoExpiryLossCount,
+      },
     });
   }
 
-  if (metrics.payoffRatio < 1 && metrics.winRate < 0.55) {
-    discipline.push({
-      title: "勝率與盈虧比不能同時偏弱",
-      body: `勝率 ${percent(metrics.winRate)}、盈虧比 ${ratio(metrics.payoffRatio)}。若平均虧損大於平均盈利，進場前要更嚴格確認目標空間。`,
-    });
-  } else if (metrics.payoffRatio < 1) {
-    discipline.push({
-      title: "勝率在補洞，但平均虧損仍偏重",
-      body: `勝率 ${percent(metrics.winRate)} 還能支撐部分結果，但盈虧比 ${ratio(metrics.payoffRatio)} 代表一筆壞交易會吃掉多筆好交易。`,
-    });
-  }
-
-  if (overTradeDays.length) {
-    discipline.push({
-      title: "虧損日有加速跡象",
-      body: `${overTradeDays.length} 天同時出現高交易數與負損益。虧損日的第二、第三筆交易要特別檢查是否仍符合原計畫。`,
-    });
-  }
-
-  if (autoExpiryLosses.length) {
-    discipline.push({
-      title: "自動到期不是雜訊",
-      body: `${autoExpiryLosses.length} 筆 Ep 自動到期虧損已納入。建議把「最後可接受離場時間」寫成規則，而不是等到收盤前靠臨場判斷。`,
-    });
-  }
-
-  const bestLoserWins: Insight[] = [
-    {
-      title: "好的輸家會保護下一筆交易",
-      body: `本期平均盈利 ${money(metrics.avgWin)}、平均虧損 ${money(metrics.avgLoss)}。虧損若超出計畫，就不是市場問題，而是風險定義需要收窄。`,
+  signals.push({
+    id: "good_loser_base",
+    group: "bestLoserWins",
+    severity: "info",
+    data: {
+      avgWin: safeNumber(context.metrics.avgWin),
+      avgLoss: safeNumber(context.metrics.avgLoss),
     },
-    {
-      title: "把輸贏從自尊裡拿出來",
-      body: "復盤時先問：這筆虧損是不是按計畫發生？如果答案是肯定的，它只是交易成本；如果是否定的，它才是紀律問題。",
-    },
-  ];
+  });
 
-  if (largeLosses.length) {
-    bestLoserWins.push({
-      title: "先讓最大虧損變小",
-      body: `${largeLosses.length} 筆虧損超過 ${money(largeLossThreshold)}。改善盈虧比最快的方式，通常是砍掉尾部虧損，而不是追求更高勝率。`,
+  signals.push({
+    id: "detach_outcome_from_ego",
+    group: "bestLoserWins",
+    severity: "info",
+    data: {},
+  });
+
+  if (context.largeLossCount > 0) {
+    signals.push({
+      id: "large_tail_losses",
+      group: "bestLoserWins",
+      severity: "danger",
+      data: {
+        count: context.largeLossCount,
+        threshold: context.largeLossThreshold,
+      },
     });
   }
 
-  const offlineAdvice: Insight[] = [];
+  const assetSignal = buildAssetSignal(context);
+  if (assetSignal) signals.push(assetSignal);
+
+  if (context.weakOptionUnderlyingDays.length > 0) {
+    signals.push({
+      id: "weak_option_underlying_days",
+      group: "offlineAdvice",
+      severity: "warning",
+      data: {
+        rows: context.weakOptionUnderlyingDays,
+      },
+    });
+  }
+
+  ensureGroupFallback(signals, "offlineAdvice", {
+    id: "clean_sample",
+    group: "offlineAdvice",
+    severity: "info",
+    data: {},
+  });
+
+  return signals;
+}
+
+function buildProfitFactorSignal(context: AdviceContext): AdviceSignal {
+  const profitFactor = safeNumber(context.metrics.profitFactor);
+
+  if (profitFactor < 1) {
+    return {
+      id: "profit_factor_below_one",
+      group: "discipline",
+      severity: "danger",
+      data: { profitFactor },
+    };
+  }
+
+  if (profitFactor < 1.5) {
+    return {
+      id: "profit_factor_thin_edge",
+      group: "discipline",
+      severity: "warning",
+      data: { profitFactor },
+    };
+  }
+
+  return {
+    id: "profit_factor_healthy",
+    group: "discipline",
+    severity: "info",
+    data: { profitFactor },
+  };
+}
+
+function buildPayoffSignal(context: AdviceContext): AdviceSignal | undefined {
+  const winRate = safeNumber(context.metrics.winRate);
+  const payoffRatio = safeNumber(context.metrics.payoffRatio);
+
+  if (payoffRatio >= 1) return undefined;
+
+  if (winRate < 0.55) {
+    return {
+      id: "winrate_and_payoff_weak",
+      group: "discipline",
+      severity: "danger",
+      data: {
+        winRate,
+        payoffRatio,
+      },
+    };
+  }
+
+  return {
+    id: "high_winrate_weak_payoff",
+    group: "discipline",
+    severity: "warning",
+    data: {
+      winRate,
+      payoffRatio,
+    },
+  };
+}
+
+function buildAssetSignal(context: AdviceContext): AdviceSignal | undefined {
+  const { option, stock } = context;
+
   if (option && stock) {
-    const stronger = option.profitFactor >= stock.profitFactor ? "期權" : "股票";
-    offlineAdvice.push({
-      title: `${stronger} 目前相對更有優勢`,
-      body: `期權 PF ${ratio(option.profitFactor)}、股票 PF ${ratio(stock.profitFactor)}。先把資金與注意力放在 PF 更穩的類別，再檢查另一類是否只是偶發試單。`,
-    });
-  } else if (option) {
-    offlineAdvice.push({
+    const optionPf = safeNumber(option.profitFactor);
+    const stockPf = safeNumber(stock.profitFactor);
+    const stronger = optionPf >= stockPf ? "option" : "stock";
+
+    return {
+      id: "asset_group_relative_edge",
+      group: "offlineAdvice",
+      severity: "info",
+      data: {
+        stronger,
+        optionProfitFactor: optionPf,
+        stockProfitFactor: stockPf,
+      },
+    };
+  }
+
+  if (option) {
+    return {
+      id: "option_sample_dominant",
+      group: "offlineAdvice",
+      severity: "info",
+      data: {
+        optionProfitFactor: safeNumber(option.profitFactor),
+        optionWinRate: safeNumber(option.winRate),
+      },
+    };
+  }
+
+  if (stock) {
+    return {
+      id: "stock_sample_dominant",
+      group: "offlineAdvice",
+      severity: "info",
+      data: {
+        stockProfitFactor: safeNumber(stock.profitFactor),
+        stockWinRate: safeNumber(stock.winRate),
+      },
+    };
+  }
+
+  return undefined;
+}
+
+function ensureGroupFallback(
+  signals: AdviceSignal[],
+  group: AdviceGroup,
+  fallback: AdviceSignal,
+): void {
+  if (!signals.some((signal) => signal.group === group)) {
+    signals.push(fallback);
+  }
+}
+
+function renderAdviceBundle(
+  signals: AdviceSignal[],
+  locale: SupportedLocale,
+): AdviceBundle {
+  const bundle: AdviceBundle = {
+    discipline: [],
+    bestLoserWins: [],
+    offlineAdvice: [],
+  };
+
+  for (const signal of signals) {
+    const insight = renderSignal(signal, locale);
+    if (insight) bundle[signal.group].push(insight);
+  }
+
+  return bundle;
+}
+
+function renderSignal(
+  signal: AdviceSignal,
+  locale: SupportedLocale,
+): Insight | undefined {
+  const renderer = copy[locale][signal.id] ?? copy.en[signal.id];
+  if (!renderer) return undefined;
+  return renderer(signal.data);
+}
+
+type CopyRenderer = (data: Record<string, unknown>) => Insight;
+
+const copy: Record<SupportedLocale, Record<string, CopyRenderer>> = {
+  "zh-Hant": {
+    profit_factor_below_one: (data) => ({
+      title: "PF 低於 1，先處理虧損尾巴",
+      body: `目前 PF ${ratio(n(data.profitFactor))}，代表總盈利還蓋不住總虧損。下一步優先降低單筆大虧、到期歸零與失控加倉，而不是增加交易次數。`,
+    }),
+
+    profit_factor_thin_edge: (data) => ({
+      title: "PF 有基礎，但容錯很薄",
+      body: `目前 PF ${ratio(n(data.profitFactor))}。這種狀態不是不能交易，而是不能讓一兩筆失控虧損吃掉整段成果。先定義單日最大虧損、最晚離場時間與停手機制。`,
+    }),
+
+    profit_factor_healthy: (data) => ({
+      title: "PF 結構相對健康",
+      body: `目前 PF ${ratio(n(data.profitFactor))}。接下來不要盲目放大頻率，應該找出哪些標的、時段與策略最穩，保留可重複的高品質交易。`,
+    }),
+
+    winrate_and_payoff_weak: (data) => ({
+      title: "勝率與盈虧比不能同時偏弱",
+      body: `勝率 ${percent(n(data.winRate))}、盈虧比 ${ratio(n(data.payoffRatio))}。這代表你既沒有足夠命中率，也沒有足夠單筆收益補償錯誤。進場前要更嚴格確認目標空間與止損距離。`,
+    }),
+
+    high_winrate_weak_payoff: (data) => ({
+      title: "勝率在補洞，但平均虧損仍偏重",
+      body: `勝率 ${percent(n(data.winRate))} 還能支撐部分結果，但盈虧比 ${ratio(n(data.payoffRatio))} 代表一筆壞交易會吃掉多筆好交易。這通常不是看不準，而是離場與風險定義太鬆。`,
+    }),
+
+    overtrade_loss_days: (data) => ({
+      title: "虧損日有加速跡象",
+      body: `${n(data.days)} 天同時出現高交易數與負損益。這類日子要單獨復盤第二筆以後的交易：它們是原計畫，還是想把虧損追回來？`,
+    }),
+
+    auto_expiry_losses: (data) => ({
+      title: "自動到期不是雜訊",
+      body: `${n(data.count)} 筆自動到期虧損已納入。到期歸零應該被視為可管理風險，而不是收盤前才處理的意外。建議寫死「最晚離場時間」。`,
+    }),
+
+    good_loser_base: (data) => ({
+      title: "好的輸家會保護下一筆交易",
+      body: `本期平均盈利 ${money(n(data.avgWin))}、平均虧損 ${money(n(data.avgLoss))}。虧損若在計畫內，是交易成本；虧損若超出計畫，就是風險定義需要收窄。`,
+    }),
+
+    detach_outcome_from_ego: () => ({
+      title: "把輸贏從自尊裡拿出來",
+      body: "復盤時先問：這筆虧損是不是按計畫發生？如果答案是肯定的，它只是成本；如果是否定的，它才是紀律問題。",
+    }),
+
+    large_tail_losses: (data) => ({
+      title: "先讓最大虧損變小",
+      body: `${n(data.count)} 筆虧損超過 ${money(n(data.threshold))}。改善 PF 最快的方式，通常不是提高勝率，而是砍掉會摧毀整週成果的尾部虧損。`,
+    }),
+
+    asset_group_relative_edge: (data) => {
+      const stronger = data.stronger === "option" ? "期權" : "股票";
+      return {
+        title: `${stronger} 目前相對更有優勢`,
+        body: `期權 PF ${ratio(n(data.optionProfitFactor))}、股票 PF ${ratio(n(data.stockProfitFactor))}。先把資金與注意力放在 PF 更穩的類別，再檢查另一類是否只是偶發試單或情緒交易。`,
+      };
+    },
+
+    option_sample_dominant: (data) => ({
       title: "目前樣本主要是期權",
-      body: `期權 PF ${ratio(option.profitFactor)}、勝率 ${percent(option.winRate)}。請特別追蹤到期、行權與最後交易時段的決策品質。`,
-    });
-  }
+      body: `期權 PF ${ratio(n(data.optionProfitFactor))}、勝率 ${percent(n(data.optionWinRate))}。請把到期、行權、最後交易時段與 IV 變化分開復盤，不要只看總盈虧。`,
+    }),
 
-  const weakOptionDays = report.optionUnderlyingDays.filter((row) => row.count >= 3 && row.profitFactor < 1).slice(0, 2);
-  if (weakOptionDays.length) {
-    offlineAdvice.push({
+    stock_sample_dominant: (data) => ({
+      title: "目前樣本主要是股票",
+      body: `股票 PF ${ratio(n(data.stockProfitFactor))}、勝率 ${percent(n(data.stockWinRate))}。下一步應檢查持倉時間、止損一致性與是否追高，而不是直接把股票結果和期權混在一起看。`,
+    }),
+
+    weak_option_underlying_days: (data) => ({
       title: "期權弱勢標的日期要單獨復盤",
-      body: weakOptionDays.map((row) => `${row.underlying} ${row.day} PF ${ratio(row.profitFactor)}`).join("；") + "。這些組合比總表更接近實際決策場景。",
-    });
-  }
+      body: `${formatWeakOptionRows(data.rows)}。這些組合比總表更接近實際決策場景，應優先檢查當天方向、入場時間與是否接近到期。`,
+    }),
 
-  if (!offlineAdvice.length) {
-    offlineAdvice.push({
+    clean_sample: () => ({
       title: "先保持樣本乾淨",
-      body: "目前沒有明顯單一資產類別拖累。下一步可以累積更多樣本，再看週期性與標的集中度。",
-    });
-  }
+      body: "目前沒有明顯單一資產類別拖累。下一步可以累積更多樣本，再看週期性、標的集中度與策略穩定性。",
+    }),
+  },
 
-  return localizeChineseAdvice({ discipline, bestLoserWins, offlineAdvice }, locale);
+  "zh-Hans": {
+    profit_factor_below_one: (data) => ({
+      title: "PF 低于 1，先处理亏损尾巴",
+      body: `目前 PF ${ratio(n(data.profitFactor))}，代表总盈利还盖不住总亏损。下一步优先降低单笔大亏、到期归零与失控加仓，而不是增加交易次数。`,
+    }),
+
+    profit_factor_thin_edge: (data) => ({
+      title: "PF 有基础，但容错很薄",
+      body: `目前 PF ${ratio(n(data.profitFactor))}。这种状态不是不能交易，而是不能让一两笔失控亏损吃掉整段成果。先定义单日最大亏损、最晚离场时间与停手机制。`,
+    }),
+
+    profit_factor_healthy: (data) => ({
+      title: "PF 结构相对健康",
+      body: `目前 PF ${ratio(n(data.profitFactor))}。接下来不要盲目放大频率，应该找出哪些标的、时段与策略最稳，保留可重复的高质量交易。`,
+    }),
+
+    winrate_and_payoff_weak: (data) => ({
+      title: "胜率与盈亏比不能同时偏弱",
+      body: `胜率 ${percent(n(data.winRate))}、盈亏比 ${ratio(n(data.payoffRatio))}。这代表你既没有足够命中率，也没有足够单笔收益补偿错误。进场前要更严格确认目标空间与止损距离。`,
+    }),
+
+    high_winrate_weak_payoff: (data) => ({
+      title: "胜率在补洞，但平均亏损仍偏重",
+      body: `胜率 ${percent(n(data.winRate))} 还能支撑部分结果，但盈亏比 ${ratio(n(data.payoffRatio))} 代表一笔坏交易会吃掉多笔好交易。这通常不是看不准，而是离场与风险定义太松。`,
+    }),
+
+    overtrade_loss_days: (data) => ({
+      title: "亏损日有加速迹象",
+      body: `${n(data.days)} 天同时出现高交易数与负损益。这类日子要单独复盘第二笔以后的交易：它们是原计划，还是想把亏损追回来？`,
+    }),
+
+    auto_expiry_losses: (data) => ({
+      title: "自动到期不是噪声",
+      body: `${n(data.count)} 笔自动到期亏损已纳入。到期归零应该被视为可管理风险，而不是收盘前才处理的意外。建议写死“最晚离场时间”。`,
+    }),
+
+    good_loser_base: (data) => ({
+      title: "好的输家会保护下一笔交易",
+      body: `本期平均盈利 ${money(n(data.avgWin))}、平均亏损 ${money(n(data.avgLoss))}。亏损若在计划内，是交易成本；亏损若超出计划，就是风险定义需要收窄。`,
+    }),
+
+    detach_outcome_from_ego: () => ({
+      title: "把输赢从自尊里拿出来",
+      body: "复盘时先问：这笔亏损是不是按计划发生？如果答案是肯定的，它只是成本；如果是否定的，它才是纪律问题。",
+    }),
+
+    large_tail_losses: (data) => ({
+      title: "先让最大亏损变小",
+      body: `${n(data.count)} 笔亏损超过 ${money(n(data.threshold))}。改善 PF 最快的方式，通常不是提高胜率，而是砍掉会摧毁整周成果的尾部亏损。`,
+    }),
+
+    asset_group_relative_edge: (data) => {
+      const stronger = data.stronger === "option" ? "期权" : "股票";
+      return {
+        title: `${stronger} 目前相对更有优势`,
+        body: `期权 PF ${ratio(n(data.optionProfitFactor))}、股票 PF ${ratio(n(data.stockProfitFactor))}。先把资金与注意力放在 PF 更稳的类别，再检查另一类是否只是偶发试单或情绪交易。`,
+      };
+    },
+
+    option_sample_dominant: (data) => ({
+      title: "目前样本主要是期权",
+      body: `期权 PF ${ratio(n(data.optionProfitFactor))}、胜率 ${percent(n(data.optionWinRate))}。请把到期、行权、最后交易时段与 IV 变化分开复盘，不要只看总盈亏。`,
+    }),
+
+    stock_sample_dominant: (data) => ({
+      title: "目前样本主要是股票",
+      body: `股票 PF ${ratio(n(data.stockProfitFactor))}、胜率 ${percent(n(data.stockWinRate))}。下一步应检查持仓时间、止损一致性与是否追高，而不是直接把股票结果和期权混在一起看。`,
+    }),
+
+    weak_option_underlying_days: (data) => ({
+      title: "期权弱势标的日期要单独复盘",
+      body: `${formatWeakOptionRows(data.rows)}。这些组合比总表更接近实际决策场景，应优先检查当天方向、入场时间与是否接近到期。`,
+    }),
+
+    clean_sample: () => ({
+      title: "先保持样本干净",
+      body: "目前没有明显单一资产类别拖累。下一步可以累积更多样本，再看周期性、标的集中度与策略稳定性。",
+    }),
+  },
+
+  en: {
+    profit_factor_below_one: (data) => ({
+      title: "Profit factor is below 1",
+      body: `PF is ${ratio(n(data.profitFactor))}. Total gains are not covering total losses yet. Focus first on reducing large losses, expiry losses, and uncontrolled add-ons before increasing trade count.`,
+    }),
+
+    profit_factor_thin_edge: (data) => ({
+      title: "Profit factor has a thin edge",
+      body: `PF is ${ratio(n(data.profitFactor))}. This is tradable, but one or two uncontrolled losses can erase the whole period. Define max daily loss, latest exit time, and pause rules first.`,
+    }),
+
+    profit_factor_healthy: (data) => ({
+      title: "Profit factor structure looks healthier",
+      body: `PF is ${ratio(n(data.profitFactor))}. Do not blindly increase frequency. Identify which symbols, sessions, and setups are repeatable, then keep only the higher-quality trades.`,
+    }),
+
+    winrate_and_payoff_weak: (data) => ({
+      title: "Win rate and payoff cannot both be weak",
+      body: `Win rate is ${percent(n(data.winRate))} and payoff ratio is ${ratio(n(data.payoffRatio))}. That means neither hit rate nor average reward is compensating enough. Confirm target room and stop distance before entry.`,
+    }),
+
+    high_winrate_weak_payoff: (data) => ({
+      title: "Win rate is patching a weak payoff structure",
+      body: `Win rate is ${percent(n(data.winRate))}, but payoff ratio is ${ratio(n(data.payoffRatio))}. One bad trade can consume several good trades. This is usually an exit and risk-definition issue, not just a direction issue.`,
+    }),
+
+    overtrade_loss_days: (data) => ({
+      title: "Losing days show acceleration",
+      body: `${n(data.days)} days had both high trade count and negative PnL. Review trades after the first loss separately: were they still part of the plan, or were they attempts to win it back?`,
+    }),
+
+    auto_expiry_losses: (data) => ({
+      title: "Auto-expiry losses are not noise",
+      body: `${n(data.count)} auto-expiry losses were included. Expiry-to-zero should be treated as manageable risk, not an end-of-day accident. Write down the latest acceptable exit time.`,
+    }),
+
+    good_loser_base: (data) => ({
+      title: "A good loser protects the next trade",
+      body: `Average win is ${money(n(data.avgWin))} and average loss is ${money(n(data.avgLoss))}. Losses inside the plan are business costs; losses outside the plan mean risk must be narrowed.`,
+    }),
+
+    detach_outcome_from_ego: () => ({
+      title: "Separate PnL from ego",
+      body: "During review, ask first: did this loss happen according to plan? If yes, it is cost. If no, it is a discipline problem.",
+    }),
+
+    large_tail_losses: (data) => ({
+      title: "Reduce the largest losses first",
+      body: `${n(data.count)} losses exceeded ${money(n(data.threshold))}. The fastest way to improve PF is usually not raising win rate, but cutting the tail losses that destroy a whole week of progress.`,
+    }),
+
+    asset_group_relative_edge: (data) => {
+      const stronger = data.stronger === "option" ? "Options" : "Stocks";
+      return {
+        title: `${stronger} currently show a relative edge`,
+        body: `Option PF is ${ratio(n(data.optionProfitFactor))}; stock PF is ${ratio(n(data.stockProfitFactor))}. Put capital and attention where PF is more stable, then check whether the weaker bucket is just occasional testing or emotional trading.`,
+      };
+    },
+
+    option_sample_dominant: (data) => ({
+      title: "The current sample is mainly options",
+      body: `Option PF is ${ratio(n(data.optionProfitFactor))} with ${percent(n(data.optionWinRate))} win rate. Review expiry, assignment/exercise, final-session decisions, and IV changes separately instead of only looking at total PnL.`,
+    }),
+
+    stock_sample_dominant: (data) => ({
+      title: "The current sample is mainly stocks",
+      body: `Stock PF is ${ratio(n(data.stockProfitFactor))} with ${percent(n(data.stockWinRate))} win rate. Check holding time, stop consistency, and chase entries before mixing stock results with options.`,
+    }),
+
+    weak_option_underlying_days: (data) => ({
+      title: "Review weak option symbol-days separately",
+      body: `${formatWeakOptionRows(data.rows)}. These combinations are closer to the real decision context than the summary table. Check direction, entry timing, and proximity to expiry first.`,
+    }),
+
+    clean_sample: () => ({
+      title: "Keep the sample clean",
+      body: "No single asset group is clearly dragging the result. Keep collecting clean closed-trade samples, then review cyclicality, symbol concentration, and setup stability.",
+    }),
+  },
+};
+
+function formatWeakOptionRows(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+
+  return value
+    .map((row) => {
+      const underlying = String(row?.underlying ?? "Unknown");
+      const day = String(row?.day ?? "Unknown day");
+      const pf = ratio(safeNumber(row?.profitFactor));
+      return `${underlying} ${day} PF ${pf}`;
+    })
+    .join("；");
 }
 
-function localizeChineseAdvice(bundle: AdviceBundle, locale: Locale): AdviceBundle {
-  if (locale !== "zh-Hans") return bundle;
-  return {
-    discipline: bundle.discipline.map(simplifyInsight),
-    bestLoserWins: bundle.bestLoserWins.map(simplifyInsight),
-    offlineAdvice: bundle.offlineAdvice.map(simplifyInsight),
-  };
+function n(value: unknown): number {
+  return safeNumber(value);
 }
 
-function simplifyInsight(item: Insight): Insight {
-  return {
-    title: simplifyChinese(item.title),
-    body: simplifyChinese(item.body),
-  };
+function safeNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function simplifyChinese(value: string): string {
-  const map: Record<string, string> = {
-    於: "于", 處: "处", 虧: "亏", 損: "损", 總: "总", 還: "还", 蓋: "盖", 單: "单", 筆: "笔", 與: "与",
-    歸: "归", 零: "零", 增: "增", 類: "类", 狀: "状", 態: "态", 錯: "错", 兩: "两", 強: "强", 場: "场",
-    規: "规", 則: "则", 結: "结", 構: "构", 對: "对", 開: "开", 檢: "检", 查: "查", 標: "标", 時: "时",
-    段: "段", 穩: "稳", 留: "留", 質: "质", 頻: "频", 勝: "胜", 率: "率", 嚴: "严", 認: "认", 識: "识",
-    進: "进", 補: "补", 撐: "撑", 壞: "坏", 會: "会", 號: "号", 跡: "迹", 同: "同", 數: "数", 負: "负",
-    益: "益", 特: "特", 別: "别", 計: "计", 畫: "划", 動: "动", 期: "期", 雜: "杂", 訊: "讯", 納: "纳",
-    議: "议", 寫: "写", 後: "后", 間: "间", 盤: "盘", 臨: "临", 輸: "输", 護: "护", 風: "风", 險: "险",
-    定: "定", 義: "义", 窄: "窄", 贏: "赢", 裡: "里", 問: "问", 發: "发", 答: "答", 肯: "肯", 才: "才",
-    紀: "纪", 律: "律", 讓: "让", 過: "过", 改: "改", 善: "善", 通: "通", 常: "常", 砍: "砍", 追: "追",
-    權: "权", 優: "优", 勢: "势", 資: "资", 金: "金", 類別: "类别", 另: "另", 偶: "偶",
-    試: "试", 樣: "样", 請: "请", 蹤: "踪", 行: "行", 策: "策", 品: "品", 弱: "弱", 獨: "独", 複: "复",
-    這: "这", 組: "组", 實: "实", 淨: "净", 顯: "显", 產: "产", 週: "周", 集: "集",
-  };
-  return value.replace(/[於處虧損總還蓋單筆與歸增類狀態錯兩強場規則結構對開檢標時穩質頻勝嚴認識進補撐壞會號跡數負別計畫動雜訊納議寫後間盤臨輸護風險義裡問發答紀律讓過權優勢資類請蹤樣顯產週複實淨]/g, (char) => map[char] || char)
-    .replace(/類別/g, "类别")
-    .replace(/標的/g, "标的")
-    .replace(/期權/g, "期权")
-    .replace(/復盤/g, "复盘");
-}
-
-function buildEnglishFallback(report: ParsedStatement): AdviceBundle {
-  const { metrics } = report;
-  const option = report.assetGroups.find((row) => row.group === "option");
-  const largeLosses = report.closedTrades.filter((trade) => trade.realizedPnl < -Math.max(100, metrics.avgWin));
-  const pfLabel = ratio(metrics.profitFactor);
-
-  return {
-    discipline: [
-      {
-        title: metrics.profitFactor < 1 ? "Profit factor is below 1" : "Profit factor has a workable base",
-        body: metrics.profitFactor < 1
-          ? `PF is ${pfLabel}. Focus first on cutting large losses and expiry losses before increasing trade count.`
-          : `PF is ${pfLabel}. Keep reviewing whether the best symbols and sessions are repeatable.`,
-      },
-      {
-        title: "Check payoff before win rate",
-        body: `Win rate is ${percent(metrics.winRate)} and payoff ratio is ${ratio(metrics.payoffRatio)}. A high win rate cannot rescue a weak average win/loss structure forever.`,
-      },
-    ],
-    bestLoserWins: [
-      {
-        title: "A good loser protects the next trade",
-        body: `Average win is ${money(metrics.avgWin)} and average loss is ${money(metrics.avgLoss)}. Losses inside plan are business costs; losses outside plan are discipline signals.`,
-      },
-      {
-        title: largeLosses.length ? "Reduce tail losses first" : "Slow down after losses",
-        body: largeLosses.length
-          ? `${largeLosses.length} losses are larger than your average win threshold. Shortening the tail can improve PF faster than chasing win rate.`
-          : "After a losing sequence, reduce size or pause so the next decision comes from the plan, not urgency.",
-      },
-    ],
-    offlineAdvice: [
-      {
-        title: option ? "Review option quality separately" : "Keep the sample clean",
-        body: option
-          ? `Option PF is ${ratio(option.profitFactor)} with ${percent(option.winRate)} win rate. Track expiry and last-exit rules separately.`
-          : "No dominant option bucket was found. Keep collecting clean closed-trade samples before drawing stronger conclusions.",
-      },
-    ],
-  };
+function safePositive(value: unknown): number {
+  return Math.max(0, safeNumber(value));
 }

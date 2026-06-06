@@ -533,6 +533,12 @@ h2 {
   grid-column: span 1;
 }
 
+.workspace > .option-panel,
+.workspace > .leaderboard-panel {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 canvas {
   width: 100%;
   height: 260px;
@@ -641,6 +647,58 @@ table {
   min-width: 620px;
 }
 
+.table-wrap.option-trades table {
+  min-width: 840px;
+}
+
+.table-wrap.leaderboard-table table {
+  min-width: 760px;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 38px;
+  padding-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.pager-button {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--accent-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.pager-button:hover,
+.pager-button:focus-visible {
+  background: var(--panel-2);
+}
+
+.pager-button:disabled {
+  cursor: not-allowed;
+  opacity: .42;
+}
+
+.pager-status {
+  min-width: 76px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 th,
 td {
   padding: 10px 9px;
@@ -701,9 +759,15 @@ th {
   font-size: 12px;
 }
 
-.detail-row td:nth-child(2)::before {
+.detail-row td:first-child::before {
   content: "· ";
   color: var(--line);
+}
+
+.contract-detail {
+  min-width: 160px;
+  max-width: 260px;
+  overflow-wrap: anywhere;
 }
 
 .sort-button {
@@ -748,6 +812,14 @@ th {
 
 .num {
   font-variant-numeric: tabular-nums;
+}
+
+.date-list {
+  min-width: 150px;
+  max-width: 320px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .win {

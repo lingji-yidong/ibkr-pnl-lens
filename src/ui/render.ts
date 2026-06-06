@@ -1,5 +1,5 @@
 import { escapeHtml, money, percent, ratio } from "../domain/format";
-import type { AssetGroup, AssetGroupSummary, Insight, OptionUnderlyingDaySummary, ParsedStatement, PeriodPerformance, SymbolSummary } from "../domain/types";
+import type { AssetGroup, AssetGroupSummary, ClosedTrade, Insight, ParsedStatement, PeriodPerformance, SymbolSummary } from "../domain/types";
 import { buildLocalizedAdvice } from "./advice";
 import { drawDailyChart, drawDistributionChart, drawPeriodPerformanceChart } from "./chart";
 import type { Locale, TranslationKey } from "./i18n";
@@ -21,6 +21,7 @@ export interface RenderOptions {
   periodMode: PeriodMode;
   theme: ThemeMode;
   sorts: Partial<Record<SortTable, SortState>>;
+  symbolPage: number;
 }
 
 export interface AppElements {
@@ -46,6 +47,7 @@ export interface AppElements {
   assetRows: HTMLElement;
   optionRows: HTMLElement;
   symbolRows: HTMLElement;
+  symbolPager: HTMLElement;
   offlineAdvice: HTMLElement;
 }
 
@@ -83,8 +85,8 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   renderInsights(els.bestLoserList, advice.bestLoserWins);
   renderInsights(els.offlineAdvice, advice.offlineAdvice);
   renderAssetGroups(els.assetRows, report.assetGroups, options.locale);
-  renderOptionRows(els.optionRows, report.optionUnderlyingDays, options.locale, options.sorts.option);
-  renderSymbols(els.symbolRows, sortRows(report.symbols, options.sorts.symbol), options.locale);
+  renderOptionRows(els.optionRows, report.optionTrades, options.locale, options.sorts.option);
+  renderSymbols(els.symbolRows, els.symbolPager, sortRows(report.symbols, options.sorts.symbol), options.locale, options.symbolPage);
   updateSortButtons(options.sorts);
 }
 
@@ -182,8 +184,14 @@ function renderInsights(target: HTMLElement, items: Insight[]): void {
     .join("");
 }
 
-function renderSymbols(target: HTMLElement, symbols: SymbolSummary[], locale: Locale): void {
-  target.innerHTML = symbols.slice(0, 18).map((row) => {
+function renderSymbols(target: HTMLElement, pager: HTMLElement, symbols: SymbolSummary[], locale: Locale, page: number): void {
+  const pageSize = 10;
+  const pageCount = Math.max(1, Math.ceil(symbols.length / pageSize));
+  const currentPage = Math.min(Math.max(page, 1), pageCount);
+  const start = (currentPage - 1) * pageSize;
+  const visibleSymbols = symbols.slice(start, start + pageSize);
+
+  target.innerHTML = visibleSymbols.map((row) => {
     const tone = row.pnl >= 0 ? "win" : "loss";
     return `
       <tr>
@@ -196,6 +204,21 @@ function renderSymbols(target: HTMLElement, symbols: SymbolSummary[], locale: Lo
       </tr>
     `;
   }).join("");
+
+  if (!symbols.length) {
+    target.innerHTML = `<tr><td colspan="6">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
+  }
+
+  pager.innerHTML = `
+    <button class="pager-button" type="button" data-symbol-page="prev" aria-label="${escapeHtml(t(locale, "previousPage"))}"${currentPage <= 1 ? " disabled" : ""}>‹</button>
+    <span class="pager-status">${escapeHtml(pageStatus(locale, currentPage, pageCount))}</span>
+    <button class="pager-button" type="button" data-symbol-page="next" aria-label="${escapeHtml(t(locale, "nextPage"))}"${currentPage >= pageCount ? " disabled" : ""}>›</button>
+  `;
+}
+
+function pageStatus(locale: Locale, page: number, pageCount: number): string {
+  const compactPageLocales: Locale[] = ["zh-Hant", "zh-Hans", "ja", "ko"];
+  return compactPageLocales.includes(locale) ? `${page} / ${pageCount} ${t(locale, "page")}` : `${t(locale, "page")} ${page} / ${pageCount}`;
 }
 
 function renderPeriods(target: HTMLElement, periods: PeriodPerformance[], limit: number, sorted: boolean): void {
@@ -274,34 +297,31 @@ function updateSortButtons(sorts: RenderOptions["sorts"]): void {
 
 interface OptionUnderlyingSummary {
   underlying: string;
-  day: string;
+  dateLabel: string;
+  lastDate: string;
   pnl: number;
-  grossProfit: number;
-  grossLoss: number;
   profitFactor: number;
-  payoffRatio: number;
   winRate: number;
-  average: number;
   count: number;
-  wins: number;
-  losses: number;
   autoExpiryCount: number;
-  details: OptionUnderlyingDaySummary[];
+  details: ClosedTrade[];
 }
 
-function renderOptionRows(target: HTMLElement, rows: OptionUnderlyingDaySummary[], locale: Locale, sort: SortState | undefined): void {
+function renderOptionRows(target: HTMLElement, rows: ClosedTrade[], locale: Locale, sort: SortState | undefined): void {
   const summaries = sortRows(buildOptionUnderlyingSummaries(rows), sort);
-  target.innerHTML = summaries.slice(0, 18).map((summary, index) => {
-    const detailRows = sortRows(summary.details, sort?.key === "day" ? sort : undefined);
+  target.innerHTML = summaries.map((row, index) => {
     const groupKey = `option-${index}`;
-    return [renderOptionSummaryRow(summary, groupKey, locale), ...detailRows.map((row) => renderOptionDetailRow(row, groupKey))].join("");
+    return [
+      renderOptionSummaryRow(row, groupKey),
+      ...row.details.map((trade) => renderOptionDetailRow(trade, groupKey)),
+    ].join("");
   }).join("");
   if (!rows.length) {
-    target.innerHTML = `<tr><td colspan="9">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
+    target.innerHTML = `<tr><td colspan="7">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
   }
 }
 
-function renderOptionSummaryRow(row: OptionUnderlyingSummary, groupKey: string, locale: Locale): string {
+function renderOptionSummaryRow(row: OptionUnderlyingSummary, groupKey: string): string {
   const tone = row.pnl >= 0 ? "win" : "loss";
   return `
     <tr class="group-row">
@@ -311,67 +331,67 @@ function renderOptionSummaryRow(row: OptionUnderlyingSummary, groupKey: string, 
           <span class="option-symbol">${escapeHtml(row.underlying)}</span>
         </span>
       </td>
-      <td>${row.details.length}${escapeHtml(t(locale, "daysShort"))}</td>
+      <td class="date-list">${escapeHtml(row.dateLabel)}</td>
       <td class="num ${tone}">${money(row.pnl)}</td>
       <td class="num">${ratio(row.profitFactor)}</td>
-      <td class="num">${ratio(row.payoffRatio)}</td>
       <td class="num">${percent(row.winRate)}</td>
-      <td class="num ${tone}">${money(row.average)}</td>
       <td class="num">${row.autoExpiryCount}</td>
       <td class="num">${row.count}</td>
     </tr>
   `;
 }
 
-function renderOptionDetailRow(row: OptionUnderlyingDaySummary, groupKey: string): string {
-    const tone = row.pnl >= 0 ? "win" : "loss";
-    return `
-      <tr class="detail-row" data-option-group="${escapeHtml(groupKey)}" hidden>
-        <td></td>
-        <td>${escapeHtml(row.day)}</td>
-        <td class="num ${tone}">${money(row.pnl)}</td>
-        <td class="num">${ratio(row.profitFactor)}</td>
-        <td class="num">${ratio(row.payoffRatio)}</td>
-        <td class="num">${percent(row.winRate)}</td>
-        <td class="num ${tone}">${money(row.count ? row.pnl / row.count : 0)}</td>
-        <td class="num">${row.autoExpiryCount}</td>
-        <td class="num">${row.count}</td>
-      </tr>
-    `;
+function renderOptionDetailRow(trade: ClosedTrade, groupKey: string): string {
+  const tone = trade.realizedPnl >= 0 ? "win" : "loss";
+  return `
+    <tr class="detail-row" data-option-group="${escapeHtml(groupKey)}" hidden>
+      <td class="contract-detail">${escapeHtml(trade.displaySymbol || trade.rawSymbol || "--")}</td>
+      <td class="date-list">${escapeHtml(trade.day || "--")}</td>
+      <td class="num ${tone}">${money(trade.realizedPnl)}</td>
+      <td class="num neutral">--</td>
+      <td class="num neutral">--</td>
+      <td class="num">${trade.autoExpiry ? 1 : 0}</td>
+      <td class="num">1</td>
+    </tr>
+  `;
 }
 
-function buildOptionUnderlyingSummaries(rows: OptionUnderlyingDaySummary[]): OptionUnderlyingSummary[] {
-  const groups = new Map<string, OptionUnderlyingDaySummary[]>();
+function buildOptionUnderlyingSummaries(rows: ClosedTrade[]): OptionUnderlyingSummary[] {
+  const groups = new Map<string, ClosedTrade[]>();
   for (const row of rows) {
-    groups.set(row.underlying, [...(groups.get(row.underlying) || []), row]);
+    const underlying = row.underlyingSymbol || extractUnderlying(row.displaySymbol) || "Unknown";
+    groups.set(underlying, [...(groups.get(underlying) || []), row]);
   }
 
   return [...groups.entries()].map(([underlying, details]) => {
-    const pnl = details.reduce((total, row) => total + row.pnl, 0);
-    const grossProfit = details.reduce((total, row) => total + row.grossProfit, 0);
-    const grossLoss = details.reduce((total, row) => total + row.grossLoss, 0);
-    const wins = details.reduce((total, row) => total + row.wins, 0);
-    const losses = details.reduce((total, row) => total + row.losses, 0);
-    const count = details.reduce((total, row) => total + row.count, 0);
-    const avgWin = wins ? grossProfit / wins : 0;
-    const avgLoss = losses ? grossLoss / losses : 0;
+    const sortedDetails = [...details].sort((a, b) => a.day.localeCompare(b.day) || Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl));
+    const dates = [...new Set(sortedDetails.map((row) => row.day).filter(Boolean))];
+    const pnls = sortedDetails.map((row) => row.realizedPnl).filter((value) => value !== 0);
+    const wins = pnls.filter((value) => value > 0);
+    const losses = pnls.filter((value) => value < 0);
+    const grossProfit = sum(wins);
+    const grossLoss = Math.abs(sum(losses));
+    const lastDate = dates[dates.length - 1] || "--";
     return {
       underlying,
-      day: String(details.length),
-      pnl,
-      grossProfit,
-      grossLoss,
+      dateLabel: dates.length > 1 ? `${lastDate} +${dates.length - 1}` : lastDate,
+      lastDate,
+      pnl: sum(pnls),
       profitFactor: grossLoss ? grossProfit / grossLoss : grossProfit ? Infinity : 0,
-      payoffRatio: avgLoss ? avgWin / avgLoss : avgWin ? Infinity : 0,
-      winRate: count ? wins / count : 0,
-      average: count ? pnl / count : 0,
-      count,
-      wins,
-      losses,
-      autoExpiryCount: details.reduce((total, row) => total + row.autoExpiryCount, 0),
-      details: [...details].sort((a, b) => a.day.localeCompare(b.day)),
+      winRate: pnls.length ? wins.length / pnls.length : 0,
+      count: sortedDetails.length,
+      autoExpiryCount: sortedDetails.filter((row) => row.autoExpiry).length,
+      details: sortedDetails,
     };
   });
+}
+
+function extractUnderlying(symbol: string): string {
+  return symbol.trim().split(/\s+/)[0] || "";
+}
+
+function sum(values: number[]): number {
+  return values.reduce((total, value) => total + (Number.isFinite(value) ? value : 0), 0);
 }
 
 function assetGroupName(group: AssetGroup, locale: Locale): string {

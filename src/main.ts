@@ -11,6 +11,7 @@ interface AppState {
   periodMode: PeriodMode;
   theme: ThemeMode;
   sorts: Partial<Record<SortTable, SortState>>;
+  symbolPage: number;
 }
 
 declare global {
@@ -27,6 +28,7 @@ const state: AppState = {
   periodMode: (localStorage.getItem("ibkr-pnl-period") as PeriodMode) || "weekly",
   theme: (localStorage.getItem("ibkr-pnl-theme") as ThemeMode) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
   sorts: {},
+  symbolPage: 1,
 };
 
 const els = getElements();
@@ -36,6 +38,7 @@ bindEvents();
 window.__loadIbkrXmlForTest = (text: string) => {
   state.sourceXml = text;
   state.selectedAccountIndex = 0;
+  state.symbolPage = 1;
   state.report = parseIbkrStatement(text, state.selectedAccountIndex);
   renderCurrentReport();
 };
@@ -81,6 +84,7 @@ function bindEvents(): void {
   accountSelect.addEventListener("change", () => {
     if (!state.sourceXml) return;
     state.selectedAccountIndex = Number(accountSelect.value) || 0;
+    state.symbolPage = 1;
     state.report = parseIbkrStatement(state.sourceXml, state.selectedAccountIndex);
     renderCurrentReport();
   });
@@ -114,6 +118,14 @@ function bindEvents(): void {
       return;
     }
 
+    const pagerButton = (event.target as Element).closest<HTMLButtonElement>(".pager-button[data-symbol-page]");
+    if (pagerButton) {
+      const action = pagerButton.dataset.symbolPage;
+      state.symbolPage = action === "next" ? state.symbolPage + 1 : Math.max(1, state.symbolPage - 1);
+      renderCurrentReport();
+      return;
+    }
+
     const button = (event.target as Element).closest<HTMLButtonElement>(".sort-button");
     if (!button) return;
     const table = button.dataset.sortTable as SortTable | undefined;
@@ -125,6 +137,7 @@ function bindEvents(): void {
       ...state.sorts,
       [table]: { table, key, direction },
     };
+    if (table === "symbol") state.symbolPage = 1;
     if (table === "period") renderCurrentPeriod();
     else renderCurrentReport();
   });
@@ -135,6 +148,7 @@ async function readFile(file: File): Promise<void> {
     const text = await file.text();
     state.sourceXml = text;
     state.selectedAccountIndex = 0;
+    state.symbolPage = 1;
     state.report = parseIbkrStatement(text, state.selectedAccountIndex);
     renderCurrentReport();
   } catch (error) {
@@ -186,6 +200,7 @@ function renderCurrentReport(): void {
     periodMode: state.periodMode,
     theme: state.theme,
     sorts: state.sorts,
+    symbolPage: state.symbolPage,
   });
 }
 
@@ -196,6 +211,7 @@ function renderCurrentPeriod(): void {
     periodMode: state.periodMode,
     theme: state.theme,
     sorts: state.sorts,
+    symbolPage: state.symbolPage,
   });
 }
 
@@ -223,6 +239,7 @@ function getElements(): AppElements {
     assetRows: getElement("assetRows"),
     optionRows: getElement("optionRows"),
     symbolRows: getElement("symbolRows"),
+    symbolPager: getElement("symbolPager"),
     offlineAdvice: getElement("offlineAdvice"),
   };
 }

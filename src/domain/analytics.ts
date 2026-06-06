@@ -39,6 +39,7 @@ export function parseIbkrStatement(text: string, selectedAccountIndex = 0): Pars
     symbols: buildSymbols(closedTrades),
     assetGroups: buildAssetGroups(closedTrades),
     optionUnderlyingDays: buildOptionUnderlyingDays(closedTrades),
+    optionTrades: buildOptionTrades(closedTrades),
     discipline: buildDiscipline(closedTrades),
     bestLoserWins: buildBestLoserWins({ closedTrades, metrics }),
     offlineAdvice: buildOfflineAdvice({ closedTrades, metrics }),
@@ -228,6 +229,16 @@ function buildOptionUnderlyingDays(closedTrades: ClosedTrade[]): OptionUnderlyin
       autoExpiryCount: trades.filter((trade) => trade.autoExpiry).length,
     }))
     .sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl));
+}
+
+function buildOptionTrades(closedTrades: ClosedTrade[]): ClosedTrade[] {
+  return closedTrades
+    .filter((trade) => assetGroup(trade) === "option" && trade.realizedPnl !== 0)
+    .sort((a, b) => {
+      const byDay = b.day.localeCompare(a.day);
+      if (byDay) return byDay;
+      return Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl);
+    });
 }
 
 function buildDiscipline(closedTrades: ClosedTrade[]): Insight[] {

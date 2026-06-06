@@ -122,24 +122,22 @@
           <div id="assetRows" class="asset-compare"></div>
         </article>
 
-        <article class="panel wide">
+        <article class="panel option-panel">
           <div class="panel-head">
             <div>
               <p class="eyebrow" data-i18n="optionReview">Options</p>
-              <h2 data-i18n="optionReviewTitle">期權標的日期復盤</h2>
+              <h2 data-i18n="optionReviewTitle">期權標的復盤</h2>
             </div>
           </div>
-          <div class="table-wrap compact tall">
+          <div class="table-wrap compact tall option-trades">
             <table>
               <thead>
                 <tr>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="underlying" data-i18n="underlying">標的</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="day" data-i18n="dateCount">日期數</button></th>
+                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="lastDate" data-i18n="date">日期</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="profitFactor" data-i18n="pf">PF</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="payoffRatio" data-i18n="payoffShort">盈虧比</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="average" data-i18n="average">平均盈虧</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="autoExpiryCount" data-i18n="autoExpiry">自動到期</button></th>
                   <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="count" data-i18n="trades">筆數</button></th>
                 </tr>
@@ -149,28 +147,14 @@
           </div>
         </article>
 
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="discipline">Discipline</p>
-              <h2 data-i18n="disciplineRisk">紀律風險</h2>
-            </div>
-          </div>
-          <div id="disciplineList" class="insight-list"></div>
-          <div class="philosophy-block">
-            <p class="eyebrow" data-i18n="bestLoserWins">Best Loser Wins</p>
-            <div id="bestLoserList" class="insight-list"></div>
-          </div>
-        </article>
-
-        <article class="panel wide">
+        <article class="panel leaderboard-panel">
           <div class="panel-head">
             <div>
               <p class="eyebrow" data-i18n="symbols">Symbols</p>
-              <h2 data-i18n="symbolPerformance">標的表現</h2>
+              <h2 data-i18n="symbolPerformance">標的排行榜</h2>
             </div>
           </div>
-          <div class="table-wrap">
+          <div class="table-wrap compact tall leaderboard-table">
             <table>
               <thead>
                 <tr>
@@ -184,6 +168,21 @@
               </thead>
               <tbody id="symbolRows"></tbody>
             </table>
+          </div>
+          <div id="symbolPager" class="pager" aria-label="Symbol leaderboard pages"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow" data-i18n="discipline">Discipline</p>
+              <h2 data-i18n="disciplineRisk">紀律風險</h2>
+            </div>
+          </div>
+          <div id="disciplineList" class="insight-list"></div>
+          <div class="philosophy-block">
+            <p class="eyebrow" data-i18n="bestLoserWins">Best Loser Wins</p>
+            <div id="bestLoserList" class="insight-list"></div>
           </div>
         </article>
 

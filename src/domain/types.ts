@@ -170,6 +170,7 @@ export interface ParsedStatement {
   symbols: SymbolSummary[];
   assetGroups: AssetGroupSummary[];
   optionUnderlyingDays: OptionUnderlyingDaySummary[];
+  optionTrades: ClosedTrade[];
   discipline: Insight[];
   bestLoserWins: Insight[];
   offlineAdvice: Insight[];
