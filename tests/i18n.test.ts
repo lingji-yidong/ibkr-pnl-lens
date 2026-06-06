@@ -51,6 +51,18 @@ for (const signalId of emittedAdviceSignalIds) {
   for (const { code } of localeOptions) {
     assert.ok(t(code, `advice.${signalId}.title`).trim(), `${code}.${signalId} should have an advice title`);
     assert.ok(t(code, `advice.${signalId}.body`).trim(), `${code}.${signalId} should have an advice body`);
+    if (code !== "en") {
+      assert.notEqual(
+        t(code, `advice.${signalId}.title`),
+        t("en", `advice.${signalId}.title`),
+        `${code}.${signalId} title must not reuse English advice copy`,
+      );
+      assert.notEqual(
+        t(code, `advice.${signalId}.body`),
+        t("en", `advice.${signalId}.body`),
+        `${code}.${signalId} body must not reuse English advice copy`,
+      );
+    }
   }
 }
 
@@ -67,6 +79,16 @@ const forbiddenDomainProse = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\u0400-\u0
 for (const source of domainSources) {
   assert.equal(forbiddenDomainProse.test(source), false, "domain sources must not contain localized prose");
 }
+
+const zhHansSource = readFileSync(join(process.cwd(), "src/ui/i18n/locales/zh-Hans.ts"), "utf8");
+assert.equal(zhHansSource.includes("zh-Hant"), false, "zh-Hans locale must not depend on zh-Hant");
+assert.equal(zhHansSource.includes("zhHant"), false, "zh-Hans locale must not import the Traditional Chinese table");
+assert.equal(/\.\.\./.test(zhHansSource), false, "zh-Hans locale must be an explicit table, not a spread fallback");
+assert.equal(
+  /[虧選擇賬帳戶脫資訊實現錄託損贏週頁離線議淺標題權貨繪製導敗聲總筆數獲復盤當時與檢還這裡們應該]/.test(zhHansSource),
+  false,
+  "zh-Hans locale must not contain common Traditional Chinese residue",
+);
 
 console.log(
   JSON.stringify(
