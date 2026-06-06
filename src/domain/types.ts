@@ -16,7 +16,6 @@ export interface StatementAccountSummary {
   baseCurrency: string;
   tradeCount: number;
   orderCount: number;
-  lotCount: number;
 }
 
 export interface FlexTrade {
@@ -33,7 +32,9 @@ export interface FlexTrade {
   tradePrice: number;
   proceeds: number;
   commission: number;
+  netCash: number;
   basis: number;
+  fifoRealizedPnl: number;
   realizedPnl: number;
   mtmPnl: number;
   code: string;
@@ -84,7 +85,6 @@ export interface MetricSummary {
   deposits: number;
   openPositions: number;
   unrealizedPnl: number;
-  lotCount: number;
   autoExpiryCount: number;
 }
 

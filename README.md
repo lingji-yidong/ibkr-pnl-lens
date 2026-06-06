@@ -24,10 +24,9 @@ Recommended Flex Query sections:
 
 - Account Information
 - Trades
-- Closed Lots
 - Orders / Order History, if you want canceled order analysis
 
-The current analyzer uses `<Trade>` records as execution records and `<Lot>` records as supporting lot detail. If your Flex XML contains `<Order>` records, canceled orders are counted separately.
+The current analyzer uses `<Trade>` records as execution records. Realized P/L is calculated by matching closing executions against the most recent open executions for the same symbol, using execution cash flow when available. `<Lot>` records are ignored for P/L analytics because they can duplicate or break down the same closed activity already represented by trades. If your Flex XML contains `<Order>` records, canceled orders are counted separately.
 
 ## Privacy
 
@@ -43,7 +42,7 @@ Any rule-based notes shown by the app are generated from the uploaded statement 
 
 ## Metrics
 
-- **Net realized P/L**: Sum of realized P/L from closed trades.
+- **Net realized P/L**: Sum of realized P/L from matched closing executions.
 - **Profit Factor**: Gross profit divided by gross loss.
 - **Win Rate**: Winning closed trades divided by closed trades with non-zero realized P/L.
 - **Payoff Ratio**: Average win divided by average loss.
@@ -61,7 +60,7 @@ In IBKR Client Portal:
 2. Go to `Flex Queries`.
 3. Create or edit an Activity Flex Query.
 4. Choose XML output.
-5. Include Trades and Closed Lots.
+5. Include Trades.
 6. Add Orders / Order History if you need canceled order analysis.
 7. Run the query and download the XML file.
 

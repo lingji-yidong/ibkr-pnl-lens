@@ -23,7 +23,6 @@ export function parseIbkrStatement(text: string, selectedAccountIndex = 0): Pars
     trades: flex.trades,
     closedTrades,
     canceledOrders,
-    lotCount: flex.lots.length,
   });
 
   return {
@@ -65,12 +64,10 @@ function buildMetrics({
   trades,
   closedTrades,
   canceledOrders,
-  lotCount,
 }: {
   trades: FlexTrade[];
   closedTrades: ClosedTrade[];
   canceledOrders: FlexOrder[];
-  lotCount: number;
 }): MetricSummary {
   const pnls = closedTrades.map((trade) => trade.realizedPnl).filter((value) => value !== 0);
   const wins = pnls.filter((value) => value > 0);
@@ -108,7 +105,6 @@ function buildMetrics({
     deposits: 0,
     openPositions: 0,
     unrealizedPnl: 0,
-    lotCount,
     autoExpiryCount: closedTrades.filter((trade) => trade.autoExpiry).length,
   };
 }

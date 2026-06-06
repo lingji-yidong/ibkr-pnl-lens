@@ -28,9 +28,35 @@ const multiAccountXml = `
 </FlexStatements>
 `;
 
+const xmlWithMisleadingClosedLot = `
+<FlexStatement accountId="DEMO-META" fromDate="20260101" toDate="20260131">
+  <Trades>
+    <Trade assetCategory="STK" currency="USD" symbol="META" description="META" underlyingSymbol="META" dateTime="20260115;100000" tradeDate="20260115" quantity="1" tradePrice="500" proceeds="500" ibCommission="-1" cost="450" fifoPnlRealized="50" mtmPnl="50" openCloseIndicator="C" notes="P" transactionType="Sell" />
+  </Trades>
+  <ClosedLots>
+    <Lot symbol="META" fifoPnlRealized="-9999" proceeds="-9999" />
+  </ClosedLots>
+</FlexStatement>
+`;
+
+const xmlWithMultipleMetaOptionLots = `
+<FlexStatement accountId="DEMO-META" fromDate="20260528" toDate="20260604">
+  <Trades>
+    <Trade assetCategory="OPT" currency="USD" symbol="META  260717C00750000" description="META 17JUL26 750 C" underlyingSymbol="META" dateTime="20260528;093730" tradeDate="20260528" quantity="1" tradePrice="5.1904825" proceeds="-519.04825" ibCommission="0" netCash="-519.04825" cost="519.04825" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="ExchTrade" expiry="20260717" putCall="C" strike="750" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="META  260717C00750000" description="META 17JUL26 750 C" underlyingSymbol="META" dateTime="20260601;101045" tradeDate="20260601" quantity="1" tradePrice="3.85" proceeds="-385" ibCommission="-0.76825" netCash="-385.76825" cost="385.76825" fifoPnlRealized="0" mtmPnl="32.5" openCloseIndicator="O" transactionType="ExchTrade" expiry="20260717" putCall="C" strike="750" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="META  260717C00750000" description="META 17JUL26 750 C" underlyingSymbol="META" dateTime="20260604;093351" tradeDate="20260604" quantity="-1" tradePrice="5.2" proceeds="520" ibCommission="-0.782252" netCash="519.217748" cost="-519.04825" fifoPnlRealized="0.169498" mtmPnl="152.5" openCloseIndicator="C" transactionType="ExchTrade" expiry="20260717" putCall="C" strike="750" multiplier="100" />
+  </Trades>
+  <ClosedLots>
+    <Lot symbol="META  260717C00750000" fifoPnlRealized="0.169498" />
+  </ClosedLots>
+</FlexStatement>
+`;
+
 const report = parseIbkrStatement(xml);
 const multiAccountReport = parseIbkrStatement(multiAccountXml);
 const secondAccountReport = parseIbkrStatement(multiAccountXml, 1);
+const misleadingLotReport = parseIbkrStatement(xmlWithMisleadingClosedLot);
+const multipleMetaLotsReport = parseIbkrStatement(xmlWithMultipleMetaOptionLots);
 
 // Basic parsing
 assert.ok(report.profile.maskedAccountId.includes("*"));
@@ -45,6 +71,15 @@ assert.equal(multiAccountReport.metrics.net, 125);
 assert.equal(secondAccountReport.metrics.net, -75);
 assert.equal(multiAccountReport.metrics.canceledOrderCount, 0);
 assert.equal(secondAccountReport.metrics.canceledOrderCount, 1);
+assert.equal(misleadingLotReport.metrics.net, 50);
+assert.equal(misleadingLotReport.metrics.executionCount, 1);
+assert.equal(misleadingLotReport.metrics.closedCount, 1);
+assert.equal(misleadingLotReport.metrics.winRate, 1);
+assert.equal(misleadingLotReport.metrics.payoffRatio, Infinity);
+assert.equal(round2(multipleMetaLotsReport.metrics.net), 133.45);
+assert.equal(multipleMetaLotsReport.metrics.closedCount, 1);
+assert.equal(round2(multipleMetaLotsReport.closedTrades[0]?.fifoRealizedPnl || 0), 0.17);
+assert.equal(round2(multipleMetaLotsReport.closedTrades[0]?.realizedPnl || 0), 133.45);
 
 // Metrics should be internally valid
 assert.ok(Number.isFinite(report.metrics.net));

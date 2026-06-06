@@ -5,7 +5,6 @@ export interface FlexXmlParseResult {
   accounts: StatementAccountSummary[];
   selectedAccountIndex: number;
   trades: FlexTrade[];
-  lots: Record<string, string>[];
   orders: FlexOrder[];
 }
 
@@ -15,9 +14,8 @@ export function parseFlexXml(text: string, selectedAccountIndex = 0): FlexXmlPar
   const statements = extractStatementBlocks(text);
   const selected = statements[Math.min(Math.max(selectedAccountIndex, 0), statements.length - 1)] || statements[0] || buildGlobalStatement(text);
   const tradeRows = extractTagAttrs(selected.content, "Trade");
-  const lots = extractTagAttrs(selected.content, "Lot");
   const orders = extractTagAttrs(selected.content, "Order") as FlexOrder[];
-  const trades = tradeRows.map(normalizeFlexTrade);
+  const trades = applyMatchedRealizedPnl(tradeRows.map(normalizeFlexTrade));
   const accountId = selected.attrs.accountId || "";
 
   return {
@@ -30,7 +28,6 @@ export function parseFlexXml(text: string, selectedAccountIndex = 0): FlexXmlPar
     accounts: statements.map(statementSummary),
     selectedAccountIndex: selected.index,
     trades,
-    lots,
     orders,
   };
 }
@@ -66,7 +63,6 @@ function buildGlobalStatement(text: string): StatementBlock {
 function statementSummary(statement: StatementBlock): StatementAccountSummary {
   const tradeRows = extractTagAttrs(statement.content, "Trade");
   const orders = extractTagAttrs(statement.content, "Order");
-  const lots = extractTagAttrs(statement.content, "Lot");
   const accountId = statement.attrs.accountId || "";
   return {
     index: statement.index,
@@ -76,7 +72,6 @@ function statementSummary(statement: StatementBlock): StatementAccountSummary {
     baseCurrency: tradeRows.find((row) => row.currency)?.currency || "USD",
     tradeCount: tradeRows.length,
     orderCount: orders.length,
-    lotCount: lots.length,
   };
 }
 
@@ -102,7 +97,9 @@ function normalizeFlexTrade(row: Record<string, string>): FlexTrade {
     tradePrice: num(row.tradePrice),
     proceeds: num(row.proceeds),
     commission: num(row.ibCommission),
+    netCash: cashFlow(row),
     basis: num(row.cost),
+    fifoRealizedPnl: num(row.fifoPnlRealized),
     realizedPnl: num(row.fifoPnlRealized),
     mtmPnl: num(row.mtmPnl),
     code: actionCodes.join(";"),
@@ -117,6 +114,76 @@ function normalizeFlexTrade(row: Record<string, string>): FlexTrade {
     strike: row.strike || "",
     multiplier: num(row.multiplier || 1),
   };
+}
+
+interface OpenExecutionLot {
+  remaining: number;
+  cashPerUnit: number;
+}
+
+function applyMatchedRealizedPnl(trades: FlexTrade[]): FlexTrade[] {
+  const stacks = new Map<string, OpenExecutionLot[]>();
+  const matchedTrades = [...trades];
+
+  for (const { trade, index } of trades
+    .map((trade, index) => ({ trade, index }))
+    .sort((a, b) => tradeTime(a.trade) - tradeTime(b.trade))) {
+      const quantity = Math.abs(trade.quantity);
+      if (!quantity) continue;
+
+      const key = positionKey(trade);
+      const cashPerUnit = trade.netCash / quantity;
+
+      if (!trade.close) {
+        const stack = stacks.get(key) || [];
+        stack.push({ remaining: quantity, cashPerUnit });
+        stacks.set(key, stack);
+        continue;
+      }
+
+      const stack = stacks.get(key) || [];
+      let remaining = quantity;
+      let matchedOpenCash = 0;
+
+      while (remaining > 0 && stack.length) {
+        const lot = stack[stack.length - 1];
+        if (!lot) break;
+        const matched = Math.min(remaining, lot.remaining);
+        matchedOpenCash += lot.cashPerUnit * matched;
+        lot.remaining -= matched;
+        remaining -= matched;
+        if (lot.remaining <= 1e-8) stack.pop();
+      }
+
+      if (remaining > 1e-8) continue;
+
+      stacks.set(key, stack);
+      matchedTrades[index] = {
+        ...trade,
+        realizedPnl: trade.netCash + matchedOpenCash,
+      };
+    }
+
+  return matchedTrades;
+}
+
+function positionKey(trade: FlexTrade): string {
+  return [
+    trade.currency,
+    trade.rawSymbol || trade.displaySymbol,
+    trade.expiry,
+    trade.putCall,
+    trade.strike,
+  ].join("|");
+}
+
+function tradeTime(trade: FlexTrade): number {
+  return trade.date?.getTime() ?? 0;
+}
+
+function cashFlow(row: Record<string, string>): number {
+  if (row.netCash) return num(row.netCash);
+  return num(row.proceeds) + num(row.ibCommission);
 }
 
 function looksLikeXml(text: string): boolean {
