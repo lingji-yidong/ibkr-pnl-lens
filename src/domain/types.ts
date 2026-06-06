@@ -1,5 +1,6 @@
-export type AssetClass = "股票" | "股票和指數期權" | "現金" | "期貨" | string;
+export type AssetClass = "stock" | "option" | "cash" | "future" | string;
 export type AssetGroup = "stock" | "option" | "other";
+export type DomainErrorCode = "invalid_flex_xml";
 
 export interface StatementProfile {
   accountId: string;
@@ -123,7 +124,6 @@ export interface SymbolSummary {
 
 export interface AssetGroupSummary {
   group: AssetGroup;
-  label: string;
   pnl: number;
   grossProfit: number;
   grossLoss: number;
@@ -151,11 +151,6 @@ export interface OptionUnderlyingDaySummary {
   autoExpiryCount: number;
 }
 
-export interface Insight {
-  title: string;
-  body: string;
-}
-
 export interface ParsedStatement {
   profile: StatementProfile;
   accounts: StatementAccountSummary[];
@@ -171,7 +166,4 @@ export interface ParsedStatement {
   assetGroups: AssetGroupSummary[];
   optionUnderlyingDays: OptionUnderlyingDaySummary[];
   optionTrades: ClosedTrade[];
-  discipline: Insight[];
-  bestLoserWins: Insight[];
-  offlineAdvice: Insight[];
 }

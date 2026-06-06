@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parseIbkrStatement } from "../src/domain/analytics";
+import { buildAdviceSignals } from "../src/ui/advice";
 
 const xml = await readFile(
   new URL("./fixtures/sample-ibkr-statement.xml", import.meta.url),
@@ -123,9 +124,11 @@ assert.ok(
   ),
 );
 
-// Strategy / advice sections should be structurally valid
-assert.ok(Array.isArray(report.bestLoserWins));
-assert.ok(Array.isArray(report.offlineAdvice));
+// Strategy / advice signals should stay in the UI boundary.
+const advice = buildAdviceSignals(report);
+assert.ok(Array.isArray(advice.bestLoserWins));
+assert.ok(Array.isArray(advice.offlineAdvice));
+assert.ok(advice.discipline.every((signal) => signal.id && signal.group === "discipline"));
 
 if (report.metrics.autoExpiryCount > 0) {
   assert.ok(

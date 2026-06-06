@@ -1,9 +1,14 @@
 import { escapeHtml, money, percent, ratio } from "../domain/format";
-import type { AssetGroup, AssetGroupSummary, ClosedTrade, Insight, ParsedStatement, PeriodPerformance, SymbolSummary } from "../domain/types";
-import { buildLocalizedAdvice } from "./advice";
+import type { AssetGroup, AssetGroupSummary, ClosedTrade, ParsedStatement, PeriodPerformance, SymbolSummary } from "../domain/types";
+import { buildAdviceSignals } from "./advice";
 import { drawDailyChart, drawDistributionChart, drawPeriodPerformanceChart } from "./chart";
 import type { Locale, TranslationKey } from "./i18n";
-import { t } from "./i18n";
+import { formatMessage, renderAdvice, t } from "./i18n";
+
+export interface Insight {
+  title: string;
+  body: string;
+}
 
 export type PeriodMode = "weekly" | "monthly";
 export type ThemeMode = "light" | "dark";
@@ -58,11 +63,14 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   els.workspace.hidden = false;
 
   els.maskedAccount.textContent = profile.maskedAccountId || "--";
-  renderAccountPicker(els, report);
+  renderAccountPicker(els, report, options.locale);
   els.maskedName.textContent = t(options.locale, "neutralName");
   els.period.textContent = profile.period || "--";
   els.baseCurrency.textContent = profile.baseCurrency || "USD";
-  els.tradeCount.textContent = `${metrics.closedCount} ${t(options.locale, "closed")} / ${metrics.executionCount} ${t(options.locale, "executions")}`;
+  els.tradeCount.textContent = formatMessage(options.locale, "tradeCountSummary", {
+    closed: metrics.closedCount,
+    executions: metrics.executionCount,
+  });
 
   els.metricsGrid.innerHTML = metricCards([
     [t(options.locale, "netRealized"), money(metrics.net), t(options.locale, "closedTradeSum"), pnlTone(metrics.net), statusLabel(options.locale, metrics.net)],
@@ -80,17 +88,17 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   drawDistributionChart(els.distributionChart, report.closedTrades, chartOptions);
   renderPeriodSection(els, report, options);
 
-  const advice = buildLocalizedAdvice(report, options.locale);
-  renderInsights(els.disciplineList, advice.discipline);
-  renderInsights(els.bestLoserList, advice.bestLoserWins);
-  renderInsights(els.offlineAdvice, advice.offlineAdvice);
+  const advice = buildAdviceSignals(report);
+  renderInsights(els.disciplineList, advice.discipline.map((signal) => renderAdvice(options.locale, signal)));
+  renderInsights(els.bestLoserList, advice.bestLoserWins.map((signal) => renderAdvice(options.locale, signal)));
+  renderInsights(els.offlineAdvice, advice.offlineAdvice.map((signal) => renderAdvice(options.locale, signal)));
   renderAssetGroups(els.assetRows, report.assetGroups, options.locale);
   renderOptionRows(els.optionRows, report.optionTrades, options.locale, options.sorts.option);
   renderSymbols(els.symbolRows, els.symbolPager, sortRows(report.symbols, options.sorts.symbol), options.locale, options.symbolPage);
   updateSortButtons(options.sorts);
 }
 
-function renderAccountPicker(els: AppElements, report: ParsedStatement): void {
+function renderAccountPicker(els: AppElements, report: ParsedStatement, locale: Locale): void {
   const hasMultipleAccounts = report.accounts.length > 1;
   els.maskedAccount.hidden = hasMultipleAccounts;
   els.accountSelect.hidden = !hasMultipleAccounts;
@@ -99,7 +107,10 @@ function renderAccountPicker(els: AppElements, report: ParsedStatement): void {
   els.accountSelect.innerHTML = report.accounts
     .map((account) => {
       const selected = account.index === report.selectedAccountIndex ? " selected" : "";
-      const label = `${account.maskedAccountId || "--"} · ${account.tradeCount} trades`;
+      const label = formatMessage(locale, "accountOptionLabel", {
+        account: account.maskedAccountId || "--",
+        trades: account.tradeCount,
+      });
       return `<option value="${account.index}"${selected}>${escapeHtml(label)}</option>`;
     })
     .join("");
@@ -107,9 +118,7 @@ function renderAccountPicker(els: AppElements, report: ParsedStatement): void {
 
 export function renderPeriodSection(els: AppElements, report: ParsedStatement, options: RenderOptions): void {
   const periods = options.periodMode === "weekly" ? report.weekly : report.monthly;
-  els.periodTitle.textContent = options.periodMode === "weekly"
-    ? `${t(options.locale, "weekly")} ${t(options.locale, "realized")}`
-    : `${t(options.locale, "monthly")} ${t(options.locale, "realized")}`;
+  els.periodTitle.textContent = formatMessage(options.locale, "periodTitle", { period: options.periodMode });
   els.periodColumnLabel.textContent = options.periodMode === "weekly" ? t(options.locale, "periodColumn") : t(options.locale, "monthColumn");
   els.periodWeekly.classList.toggle("active", options.periodMode === "weekly");
   els.periodMonthly.classList.toggle("active", options.periodMode === "monthly");
@@ -119,8 +128,8 @@ export function renderPeriodSection(els: AppElements, report: ParsedStatement, o
   updateSortButtons(options.sorts);
 }
 
-export function renderError(target: HTMLElement, message: string): void {
-  target.innerHTML = `<div class="insight"><strong>匯入失敗</strong><p>${escapeHtml(message)}</p></div>`;
+export function renderError(target: HTMLElement, locale: Locale, message: string): void {
+  target.innerHTML = `<div class="insight"><strong>${escapeHtml(t(locale, "importFailed"))}</strong><p>${escapeHtml(message)}</p></div>`;
   window.setTimeout(() => {
     target.innerHTML = "";
   }, 2400);
@@ -211,14 +220,9 @@ function renderSymbols(target: HTMLElement, pager: HTMLElement, symbols: SymbolS
 
   pager.innerHTML = `
     <button class="pager-button" type="button" data-symbol-page="prev" aria-label="${escapeHtml(t(locale, "previousPage"))}"${currentPage <= 1 ? " disabled" : ""}>‹</button>
-    <span class="pager-status">${escapeHtml(pageStatus(locale, currentPage, pageCount))}</span>
+    <span class="pager-status">${escapeHtml(formatMessage(locale, "pageStatus", { page: currentPage, pageCount }))}</span>
     <button class="pager-button" type="button" data-symbol-page="next" aria-label="${escapeHtml(t(locale, "nextPage"))}"${currentPage >= pageCount ? " disabled" : ""}>›</button>
   `;
-}
-
-function pageStatus(locale: Locale, page: number, pageCount: number): string {
-  const compactPageLocales: Locale[] = ["zh-Hant", "zh-Hans", "ja", "ko"];
-  return compactPageLocales.includes(locale) ? `${page} / ${pageCount} ${t(locale, "page")}` : `${t(locale, "page")} ${page} / ${pageCount}`;
 }
 
 function renderPeriods(target: HTMLElement, periods: PeriodPerformance[], limit: number, sorted: boolean): void {
@@ -308,11 +312,11 @@ interface OptionUnderlyingSummary {
 }
 
 function renderOptionRows(target: HTMLElement, rows: ClosedTrade[], locale: Locale, sort: SortState | undefined): void {
-  const summaries = sortRows(buildOptionUnderlyingSummaries(rows), sort);
+  const summaries = sortRows(buildOptionUnderlyingSummaries(rows, locale), sort);
   target.innerHTML = summaries.map((row, index) => {
     const groupKey = `option-${index}`;
     return [
-      renderOptionSummaryRow(row, groupKey),
+      renderOptionSummaryRow(row, groupKey, locale),
       ...row.details.map((trade) => renderOptionDetailRow(trade, groupKey)),
     ].join("");
   }).join("");
@@ -321,13 +325,13 @@ function renderOptionRows(target: HTMLElement, rows: ClosedTrade[], locale: Loca
   }
 }
 
-function renderOptionSummaryRow(row: OptionUnderlyingSummary, groupKey: string): string {
+function renderOptionSummaryRow(row: OptionUnderlyingSummary, groupKey: string, locale: Locale): string {
   const tone = row.pnl >= 0 ? "win" : "loss";
   return `
     <tr class="group-row">
       <td>
         <span class="option-underlying">
-          <button class="collapse-button" type="button" data-option-group="${escapeHtml(groupKey)}" aria-expanded="false" aria-label="Toggle details">+</button>
+          <button class="collapse-button" type="button" data-option-group="${escapeHtml(groupKey)}" aria-expanded="false" aria-label="${escapeHtml(t(locale, "toggleDetails"))}">+</button>
           <span class="option-symbol">${escapeHtml(row.underlying)}</span>
         </span>
       </td>
@@ -356,10 +360,10 @@ function renderOptionDetailRow(trade: ClosedTrade, groupKey: string): string {
   `;
 }
 
-function buildOptionUnderlyingSummaries(rows: ClosedTrade[]): OptionUnderlyingSummary[] {
+function buildOptionUnderlyingSummaries(rows: ClosedTrade[], locale: Locale): OptionUnderlyingSummary[] {
   const groups = new Map<string, ClosedTrade[]>();
   for (const row of rows) {
-    const underlying = row.underlyingSymbol || extractUnderlying(row.displaySymbol) || "Unknown";
+    const underlying = row.underlyingSymbol || extractUnderlying(row.displaySymbol) || "";
     groups.set(underlying, [...(groups.get(underlying) || []), row]);
   }
 
@@ -374,7 +378,7 @@ function buildOptionUnderlyingSummaries(rows: ClosedTrade[]): OptionUnderlyingSu
     const lastDate = dates[dates.length - 1] || "--";
     return {
       underlying,
-      dateLabel: dates.length > 1 ? `${lastDate} +${dates.length - 1}` : lastDate,
+      dateLabel: formatMessage(locale, "datePlusCount", { date: lastDate, count: dates.length }),
       lastDate,
       pnl: sum(pnls),
       profitFactor: grossLoss ? grossProfit / grossLoss : grossProfit ? Infinity : 0,
@@ -401,8 +405,10 @@ function assetGroupName(group: AssetGroup, locale: Locale): string {
 }
 
 function localizeAssetClass(value: string, locale: Locale): string {
-  if (value.includes("期權") || value.toLowerCase().includes("option")) return t(locale, "option");
-  if (value.includes("股票") || value.toLowerCase().includes("stock")) return t(locale, "stock");
+  if (value.toLowerCase().includes("option")) return t(locale, "option");
+  if (value.toLowerCase().includes("stock")) return t(locale, "stock");
+  if (value.toLowerCase().includes("cash")) return t(locale, "cash");
+  if (value.toLowerCase().includes("future")) return t(locale, "future");
   return value || t(locale, "other");
 }
 

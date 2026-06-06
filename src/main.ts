@@ -1,5 +1,6 @@
 import { parseIbkrStatement } from "./domain/analytics";
-import type { ParsedStatement } from "./domain/types";
+import { DomainError } from "./domain/flexXml";
+import type { DomainErrorCode, ParsedStatement } from "./domain/types";
 import { localeOptions, normalizeLocale, t, type Locale } from "./ui/i18n";
 import { type AppElements, type PeriodMode, type SortDirection, type SortState, type SortTable, type ThemeMode, renderError, renderPeriodSection, renderReport, translateStaticText } from "./ui/render";
 
@@ -152,9 +153,17 @@ async function readFile(file: File): Promise<void> {
     state.report = parseIbkrStatement(text, state.selectedAccountIndex);
     renderCurrentReport();
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    renderError(els.offlineAdvice, `${t(state.locale, "importFailed")}：${message}`);
+    renderError(els.offlineAdvice, state.locale, localizedError(error, state.locale));
   }
+}
+
+function localizedError(error: unknown, locale: Locale): string {
+  if (error instanceof DomainError) return t(locale, errorKey(error.code));
+  return error instanceof Error ? error.message : String(error);
+}
+
+function errorKey(code: DomainErrorCode): `error.${DomainErrorCode}` {
+  return `error.${code}`;
 }
 
 function initializePreferences(): void {

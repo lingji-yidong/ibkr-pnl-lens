@@ -1,4 +1,11 @@
-import type { FlexOrder, FlexTrade, StatementAccountSummary, StatementProfile } from "./types";
+import type { DomainErrorCode, FlexOrder, FlexTrade, StatementAccountSummary, StatementProfile } from "./types";
+
+export class DomainError extends Error {
+  constructor(public readonly code: DomainErrorCode) {
+    super(code);
+    this.name = "DomainError";
+  }
+}
 
 export interface FlexXmlParseResult {
   profile: StatementProfile;
@@ -9,7 +16,7 @@ export interface FlexXmlParseResult {
 }
 
 export function parseFlexXml(text: string, selectedAccountIndex = 0): FlexXmlParseResult {
-  if (!looksLikeXml(text)) throw new Error("請上傳 IBKR Flex XML 文件。");
+  if (!looksLikeXml(text)) throw new DomainError("invalid_flex_xml");
 
   const statements = extractStatementBlocks(text);
   const selected = statements[Math.min(Math.max(selectedAccountIndex, 0), statements.length - 1)] || statements[0] || buildGlobalStatement(text);
@@ -252,10 +259,10 @@ function splitCodes(value = ""): string[] {
 
 function flexAssetClass(value = ""): string {
   const map: Record<string, string> = {
-    STK: "股票",
-    OPT: "股票和指數期權",
-    CASH: "現金",
-    FUT: "期貨",
+    STK: "stock",
+    OPT: "option",
+    CASH: "cash",
+    FUT: "future",
   };
   return map[value] || value;
 }
