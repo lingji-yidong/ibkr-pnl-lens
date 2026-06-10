@@ -1,5 +1,5 @@
-import type { Translations } from "../keys";
-import { en } from "./en";
+import type { Translations } from "../keys.js";
+import { en } from "./en.js";
 
 export const de = {
   ...en,
@@ -21,6 +21,7 @@ export const de = {
   expectancy: "Erwartungswert",
   executionRecords: "Ausführungen",
   canceledOrders: "Stornierte Orders",
+  medianHoldingDays: "Median-Haltedauer",
   commissionDrag: "Provisionen",
   closedTradeSum: "Summe geschlossener Trades",
   grossProfitLoss: "Bruttogewinn / Bruttoverlust",
@@ -29,6 +30,19 @@ export const de = {
   flexTradeRecords: "Trade-Datensätze in Flex XML",
   flexCanceledRecords: "Stornierte Order-Datensätze in Flex XML",
   noCanceledRecords: "Keine stornierten Orders im XML",
+  holdingReview: "Holding",
+  holdingReviewTitle: "Haltedauer- und Payoff-Analyse",
+  holdingReviewHint: "Ordnet Eröffnungen und Schließungen zu und vergleicht PF, Payoff und Trefferquote je Haltedauer.",
+  holdingPeriod: "Haltedauer",
+  holdingIntraday: "Intraday",
+  holdingSwing: "1-7 Tage",
+  holdingPosition: "8-30 Tage",
+  holdingLongTerm: "30+ Tage",
+  directionReview: "Direction",
+  directionReviewTitle: "Long- / Short-Analyse",
+  directionReviewHint: "Teilt geschlossene Trades nach Eröffnungsrichtung, um die stärkere Seite zu zeigen.",
+  longPosition: "Long",
+  shortPosition: "Short",
   dailyRealized: "Täglich realisierter P/L",
   winLossDistribution: "Gewinn-/Verlustverteilung",
   periodHint: "Grüne Balken zeigen Gewinn, rote Verlust. PF und Payoff stehen in der Tabelle unten.",

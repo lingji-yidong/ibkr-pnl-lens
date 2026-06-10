@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { parseIbkrStatement } from "../src/domain/analytics";
-import { buildAdviceSignals } from "../src/ui/advice";
+import { parseIbkrStatement } from "../src/domain/analytics.js";
+import { buildAdviceSignals } from "../src/ui/advice.js";
 
 const xml = await readFile(
-  new URL("./fixtures/sample-ibkr-statement.xml", import.meta.url),
+  "tests/fixtures/sample-ibkr-statement.xml",
   "utf8",
 );
 
@@ -53,11 +53,23 @@ const xmlWithMultipleMetaOptionLots = `
 </FlexStatement>
 `;
 
+const xmlWithLongShortHolding = `
+<FlexStatement accountId="DEMO-HOLD" fromDate="20260101" toDate="20260120">
+  <Trades>
+    <Trade assetCategory="STK" currency="USD" symbol="AAA" description="AAA" underlyingSymbol="AAA" dateTime="20260102;100000" tradeDate="20260102" quantity="10" tradePrice="10" proceeds="-100" ibCommission="0" netCash="-100" cost="100" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Buy" />
+    <Trade assetCategory="STK" currency="USD" symbol="AAA" description="AAA" underlyingSymbol="AAA" dateTime="20260105;100000" tradeDate="20260105" quantity="-10" tradePrice="12" proceeds="120" ibCommission="0" netCash="120" cost="-100" fifoPnlRealized="20" mtmPnl="20" openCloseIndicator="C" transactionType="Sell" />
+    <Trade assetCategory="STK" currency="USD" symbol="BBB" description="BBB" underlyingSymbol="BBB" dateTime="20260106;100000" tradeDate="20260106" quantity="-5" tradePrice="20" proceeds="100" ibCommission="0" netCash="100" cost="-100" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="SellShort" />
+    <Trade assetCategory="STK" currency="USD" symbol="BBB" description="BBB" underlyingSymbol="BBB" dateTime="20260106;150000" tradeDate="20260106" quantity="5" tradePrice="19" proceeds="-95" ibCommission="0" netCash="-95" cost="100" fifoPnlRealized="5" mtmPnl="5" openCloseIndicator="C" transactionType="Buy" />
+  </Trades>
+</FlexStatement>
+`;
+
 const report = parseIbkrStatement(xml);
 const multiAccountReport = parseIbkrStatement(multiAccountXml);
 const secondAccountReport = parseIbkrStatement(multiAccountXml, 1);
 const misleadingLotReport = parseIbkrStatement(xmlWithMisleadingClosedLot);
 const multipleMetaLotsReport = parseIbkrStatement(xmlWithMultipleMetaOptionLots);
+const longShortHoldingReport = parseIbkrStatement(xmlWithLongShortHolding);
 
 // Basic parsing
 assert.ok(report.profile.maskedAccountId.includes("*"));
@@ -81,6 +93,13 @@ assert.equal(round2(multipleMetaLotsReport.metrics.net), 133.45);
 assert.equal(multipleMetaLotsReport.metrics.closedCount, 1);
 assert.equal(round2(multipleMetaLotsReport.closedTrades[0]?.fifoRealizedPnl || 0), 0.17);
 assert.equal(round2(multipleMetaLotsReport.closedTrades[0]?.realizedPnl || 0), 133.45);
+assert.equal(round2(multipleMetaLotsReport.metrics.medianHoldingDays), 2.97);
+assert.equal(multipleMetaLotsReport.directionSummaries[0]?.direction, "long");
+assert.equal(longShortHoldingReport.closedPositionSlices.length, 2);
+assert.equal(round2(longShortHoldingReport.metrics.medianHoldingDays), 1.6);
+assert.deepEqual(longShortHoldingReport.directionSummaries.map((row) => row.direction), ["long", "short"]);
+assert.equal(longShortHoldingReport.holdingPeriods.some((row) => row.bucket === "intraday"), true);
+assert.equal(longShortHoldingReport.holdingPeriods.some((row) => row.bucket === "swing"), true);
 
 // Metrics should be internally valid
 assert.ok(Number.isFinite(report.metrics.net));

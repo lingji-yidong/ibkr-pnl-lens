@@ -1,5 +1,5 @@
-import type { Translations } from "../keys";
-import { en } from "./en";
+import type { Translations } from "../keys.js";
+import { en } from "./en.js";
 
 export const ja = {
   ...en,
@@ -21,6 +21,7 @@ export const ja = {
   expectancy: "期待値",
   executionRecords: "約定記録",
   canceledOrders: "取消注文",
+  medianHoldingDays: "保有日数中央値",
   commissionDrag: "手数料",
   closedTradeSum: "決済取引合計",
   grossProfitLoss: "総利益 / 総損失",
@@ -29,6 +30,19 @@ export const ja = {
   flexTradeRecords: "Flex XML の Trade 記録",
   flexCanceledRecords: "Flex XML の取消 Order 記録",
   noCanceledRecords: "取消注文は含まれていません",
+  holdingReview: "Holding",
+  holdingReviewTitle: "保有期間と損益比分析",
+  holdingReviewHint: "建玉と決済を照合し、保有期間別に PF、損益比、勝率を比較します。",
+  holdingPeriod: "保有期間",
+  holdingIntraday: "日中",
+  holdingSwing: "1-7 日",
+  holdingPosition: "8-30 日",
+  holdingLongTerm: "30 日以上",
+  directionReview: "Direction",
+  directionReviewTitle: "ロング / ショート分析",
+  directionReviewHint: "建玉方向で決済取引を分け、優位性のある側を確認します。",
+  longPosition: "ロング",
+  shortPosition: "ショート",
   dailyRealized: "日次実現損益",
   winLossDistribution: "勝敗分布",
   periodHint: "緑の棒は利益、赤の棒は損失です。PF と損益比は下の表で確認できます。",

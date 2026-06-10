@@ -1,4 +1,4 @@
-import type { AdviceSignalId } from "../advice";
+import type { AdviceSignalId } from "../advice.js";
 
 export type Locale = "zh-Hant" | "zh-Hans" | "en" | "ja" | "ko" | "es" | "de" | "fr" | "ru" | "fi";
 
@@ -42,6 +42,7 @@ export const baseTranslationKeys = [
   "expectancy",
   "executionRecords",
   "canceledOrders",
+  "medianHoldingDays",
   "commissionDrag",
   "closedTradeSum",
   "grossProfitLoss",
@@ -50,6 +51,19 @@ export const baseTranslationKeys = [
   "flexTradeRecords",
   "flexCanceledRecords",
   "noCanceledRecords",
+  "holdingReview",
+  "holdingReviewTitle",
+  "holdingReviewHint",
+  "holdingPeriod",
+  "holdingIntraday",
+  "holdingSwing",
+  "holdingPosition",
+  "holdingLongTerm",
+  "directionReview",
+  "directionReviewTitle",
+  "directionReviewHint",
+  "longPosition",
+  "shortPosition",
   "equityCurve",
   "dailyRealized",
   "payoff",
@@ -152,6 +166,7 @@ export const messageFunctionKeys = [
   "pageStatus",
   "periodTitle",
   "datePlusCount",
+  "holdingSampleSummary",
   "importError",
   "adviceWeakOptionRows",
 ] as const;
@@ -164,6 +179,7 @@ export interface MessageParams {
   pageStatus: { page: number; pageCount: number };
   periodTitle: { period: "weekly" | "monthly" };
   datePlusCount: { date: string; count: number };
+  holdingSampleSummary: { count: number };
   importError: { message: string };
   adviceWeakOptionRows: { rows: Array<{ underlying: string; day: string; profitFactor: number }> };
 }

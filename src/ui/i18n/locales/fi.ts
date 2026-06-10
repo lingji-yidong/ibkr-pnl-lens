@@ -1,5 +1,5 @@
-import type { Translations } from "../keys";
-import { en } from "./en";
+import type { Translations } from "../keys.js";
+import { en } from "./en.js";
 
 export const fi = {
   ...en,
@@ -21,6 +21,7 @@ export const fi = {
   expectancy: "Odotusarvo",
   executionRecords: "Toteutukset",
   canceledOrders: "Perutut toimeksiannot",
+  medianHoldingDays: "Mediaanipitoaika",
   commissionDrag: "Palkkiot",
   closedTradeSum: "Suljettujen kauppojen summa",
   grossProfitLoss: "Bruttovoitto / bruttotappio",
@@ -29,6 +30,19 @@ export const fi = {
   flexTradeRecords: "Flex XML:n Trade-rivit",
   flexCanceledRecords: "Flex XML:n perutut Order-rivit",
   noCanceledRecords: "Tässä XML:ssä ei ole peruttuja toimeksiantoja",
+  holdingReview: "Holding",
+  holdingReviewTitle: "Pitoajan ja suhteen analyysi",
+  holdingReviewHint: "Yhdistää avaukset ja sulut sekä vertaa PF:ää, suhdetta ja voittoprosenttia pitoajan mukaan.",
+  holdingPeriod: "Pitoaika",
+  holdingIntraday: "Päivänsisäinen",
+  holdingSwing: "1-7 päivää",
+  holdingPosition: "8-30 päivää",
+  holdingLongTerm: "30+ päivää",
+  directionReview: "Direction",
+  directionReviewTitle: "Long / short -analyysi",
+  directionReviewHint: "Jakaa suljetut kaupat avaussuunnan mukaan ja näyttää vahvemman puolen.",
+  longPosition: "Long",
+  shortPosition: "Short",
   dailyRealized: "Päivittäinen realisoitu P/L",
   winLossDistribution: "Voittojen ja tappioiden jakauma",
   periodHint: "Vihreät pylväät ovat voittoa, punaiset tappiota. PF ja suhde ovat alla taulukossa.",

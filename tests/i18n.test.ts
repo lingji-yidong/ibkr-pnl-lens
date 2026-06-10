@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { adviceSignalIds, localeOptions, t, translationKeys, translations } from "../src/ui/i18n";
-import { adviceSignalIds as emittedAdviceSignalIds } from "../src/ui/advice";
+import { adviceSignalIds, localeOptions, t, translationKeys, translations } from "../src/ui/i18n/index.js";
+import { adviceSignalIds as emittedAdviceSignalIds } from "../src/ui/advice.js";
 
 const optionReviewTitles = {
   "zh-Hant": "期權標的復盤",

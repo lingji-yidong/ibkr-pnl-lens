@@ -1,4 +1,4 @@
-import type { Translations } from "../keys";
+import type { Translations } from "../keys.js";
 
 export const en = {
   eyebrow: "IBKR Activity Statement",
@@ -22,6 +22,7 @@ export const en = {
   expectancy: "Expectancy",
   executionRecords: "Executions",
   canceledOrders: "Canceled orders",
+  medianHoldingDays: "Median holding days",
   commissionDrag: "Commissions",
   closedTradeSum: "Closed trade total",
   grossProfitLoss: "Gross profit / gross loss",
@@ -30,6 +31,19 @@ export const en = {
   flexTradeRecords: "Trade records in Flex XML",
   flexCanceledRecords: "Canceled Order records in Flex XML",
   noCanceledRecords: "No canceled orders in this XML",
+  holdingReview: "Holding",
+  holdingReviewTitle: "Holding time and payoff analysis",
+  holdingReviewHint: "Matches opens to closes, then compares PF, payoff, and win rate by holding period.",
+  holdingPeriod: "Holding period",
+  holdingIntraday: "Intraday",
+  holdingSwing: "1-7 days",
+  holdingPosition: "8-30 days",
+  holdingLongTerm: "30+ days",
+  directionReview: "Direction",
+  directionReviewTitle: "Long / short position analysis",
+  directionReviewHint: "Splits closed trades by opening direction to show which side has the edge.",
+  longPosition: "Long",
+  shortPosition: "Short",
   equityCurve: "Equity Curve",
   dailyRealized: "Daily realized P/L",
   payoff: "Payoff",

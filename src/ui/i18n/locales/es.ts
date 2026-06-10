@@ -1,5 +1,5 @@
-import type { Translations } from "../keys";
-import { en } from "./en";
+import type { Translations } from "../keys.js";
+import { en } from "./en.js";
 
 export const es = {
   ...en,
@@ -21,6 +21,7 @@ export const es = {
   expectancy: "Expectativa",
   executionRecords: "Ejecuciones",
   canceledOrders: "Órdenes canceladas",
+  medianHoldingDays: "Mediana de días en posición",
   commissionDrag: "Comisiones",
   closedTradeSum: "Total de cierres",
   grossProfitLoss: "Ganancia bruta / pérdida bruta",
@@ -29,6 +30,19 @@ export const es = {
   flexTradeRecords: "Registros Trade en Flex XML",
   flexCanceledRecords: "Registros Order cancelados en Flex XML",
   noCanceledRecords: "Sin órdenes canceladas en este XML",
+  holdingReview: "Holding",
+  holdingReviewTitle: "Análisis de tenencia y relación P/L",
+  holdingReviewHint: "Empareja aperturas y cierres para comparar PF, P/L y acierto por periodo de tenencia.",
+  holdingPeriod: "Periodo de tenencia",
+  holdingIntraday: "Intradiario",
+  holdingSwing: "1-7 días",
+  holdingPosition: "8-30 días",
+  holdingLongTerm: "30+ días",
+  directionReview: "Direction",
+  directionReviewTitle: "Análisis largo / corto",
+  directionReviewHint: "Separa las operaciones cerradas por dirección de apertura para ver qué lado tiene ventaja.",
+  longPosition: "Largo",
+  shortPosition: "Corto",
   dailyRealized: "P/L diario realizado",
   winLossDistribution: "Distribución de ganancias y pérdidas",
   periodHint: "Barras verdes: ganancia; rojas: pérdida. PF y ratio P/L están en la tabla inferior.",

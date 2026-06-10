@@ -1,8 +1,8 @@
-import { parseIbkrStatement } from "./domain/analytics";
-import { DomainError } from "./domain/flexXml";
-import type { DomainErrorCode, ParsedStatement } from "./domain/types";
-import { localeOptions, normalizeLocale, t, type Locale } from "./ui/i18n";
-import { type AppElements, type PeriodMode, type SortDirection, type SortState, type SortTable, type ThemeMode, renderError, renderPeriodSection, renderReport, translateStaticText } from "./ui/render";
+import { parseIbkrStatement } from "./domain/analytics.js";
+import { DomainError } from "./domain/flexXml.js";
+import type { DomainErrorCode, ParsedStatement } from "./domain/types.js";
+import { localeOptions, normalizeLocale, t, type Locale } from "./ui/i18n/index.js";
+import { type AppElements, type PeriodMode, type SortDirection, type SortState, type SortTable, type ThemeMode, renderError, renderPeriodSection, renderReport, translateStaticText } from "./ui/render.js";
 
 interface AppState {
   report: ParsedStatement | null;
@@ -245,6 +245,8 @@ function getElements(): AppElements {
     disciplineList: getElement("disciplineList"),
     bestLoserList: getElement("bestLoserList"),
     periodRows: getElement("periodRows"),
+    holdingRows: getElement("holdingRows"),
+    directionRows: getElement("directionRows"),
     assetRows: getElement("assetRows"),
     optionRows: getElement("optionRows"),
     symbolRows: getElement("symbolRows"),

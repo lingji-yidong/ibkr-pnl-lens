@@ -1,5 +1,5 @@
-import type { Translations } from "../keys";
-import { en } from "./en";
+import type { Translations } from "../keys.js";
+import { en } from "./en.js";
 
 export const ko = {
   ...en,
@@ -21,6 +21,7 @@ export const ko = {
   expectancy: "기대값",
   executionRecords: "체결 기록",
   canceledOrders: "취소 주문",
+  medianHoldingDays: "보유일 중앙값",
   commissionDrag: "수수료",
   closedTradeSum: "청산 합계",
   grossProfitLoss: "총이익 / 총손실",
@@ -29,6 +30,19 @@ export const ko = {
   flexTradeRecords: "Flex XML Trade 기록",
   flexCanceledRecords: "Flex XML의 취소 Order 기록",
   noCanceledRecords: "취소 주문 없음",
+  holdingReview: "Holding",
+  holdingReviewTitle: "보유 기간과 손익비 분석",
+  holdingReviewHint: "진입과 청산을 매칭해 보유 기간별 PF, 손익비, 승률을 비교합니다.",
+  holdingPeriod: "보유 기간",
+  holdingIntraday: "당일",
+  holdingSwing: "1-7일",
+  holdingPosition: "8-30일",
+  holdingLongTerm: "30일 이상",
+  directionReview: "Direction",
+  directionReviewTitle: "롱 / 숏 포지션 분석",
+  directionReviewHint: "진입 방향으로 청산 거래를 나누어 어느 쪽에 우위가 있는지 확인합니다.",
+  longPosition: "롱",
+  shortPosition: "숏",
   dailyRealized: "일별 실현 손익",
   winLossDistribution: "승패 분포",
   periodHint: "녹색 막대는 이익, 빨간 막대는 손실입니다. PF와 손익비는 아래 표에서 확인하세요.",

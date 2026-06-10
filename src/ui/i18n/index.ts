@@ -1,18 +1,18 @@
-import { de } from "./locales/de";
-import { en } from "./locales/en";
-import { es } from "./locales/es";
-import { fi } from "./locales/fi";
-import { fr } from "./locales/fr";
-import { ja } from "./locales/ja";
-import { ko } from "./locales/ko";
-import { ru } from "./locales/ru";
-import { zhHans } from "./locales/zh-Hans";
-import { zhHant } from "./locales/zh-Hant";
-import { localeOptions, translationKeys, type Locale, type TranslationKey, type Translations } from "./keys";
+import { de } from "./locales/de.js";
+import { en } from "./locales/en.js";
+import { es } from "./locales/es.js";
+import { fi } from "./locales/fi.js";
+import { fr } from "./locales/fr.js";
+import { ja } from "./locales/ja.js";
+import { ko } from "./locales/ko.js";
+import { ru } from "./locales/ru.js";
+import { zhHans } from "./locales/zh-Hans.js";
+import { zhHant } from "./locales/zh-Hant.js";
+import { localeOptions, translationKeys, type Locale, type TranslationKey, type Translations } from "./keys.js";
 
-export type { Locale, LocaleOption, MessageFunctionKey, MessageParams, TranslationKey, Translations } from "./keys";
-export { adviceSignalIds, adviceTranslationKeys, baseTranslationKeys, localeOptions, messageFunctionKeys, translationKeys } from "./keys";
-export { formatMessage, renderAdvice } from "./format";
+export type { Locale, LocaleOption, MessageFunctionKey, MessageParams, TranslationKey, Translations } from "./keys.js";
+export { adviceSignalIds, adviceTranslationKeys, baseTranslationKeys, localeOptions, messageFunctionKeys, translationKeys } from "./keys.js";
+export { formatMessage, renderAdvice } from "./format.js";
 
 export const translations: Record<Locale, Translations> = {
   "zh-Hant": zhHant,

@@ -1,7 +1,7 @@
-import { money } from "../domain/format";
-import type { ClosedTrade, DailyPnl, PeriodPerformance } from "../domain/types";
-import type { Locale } from "./i18n";
-import { t } from "./i18n";
+import { money } from "../domain/format.js";
+import type { ClosedTrade, DailyPnl, PeriodPerformance } from "../domain/types.js";
+import type { Locale } from "./i18n/index.js";
+import { t } from "./i18n/index.js";
 
 interface ChartTheme {
   background: string;
@@ -69,19 +69,21 @@ export function drawDistributionChart(canvas: HTMLCanvasElement, trades: ClosedT
     const chartWidth = width - pad * 2;
     const barGap = 12;
     const barWidth = (chartWidth - barGap * (buckets.length - 1)) / buckets.length;
+    const barBottom = height - 84;
+    const labelTop = height - 52;
 
     buckets.forEach(([label, value, color], index) => {
       const x = pad + index * (barWidth + barGap);
-      const barHeight = ((height - pad * 2) * value) / max;
+      const barHeight = ((barBottom - pad) * value) / max;
       ctx.fillStyle = color;
-      ctx.fillRect(x, height - pad - barHeight, barWidth, barHeight || 2);
+      ctx.fillRect(x, barBottom - barHeight, barWidth, barHeight || 2);
       ctx.fillStyle = options.theme.muted;
-      ctx.font = "12px system-ui";
+      ctx.font = `${barWidth < 86 ? 10 : 11}px system-ui`;
       ctx.textAlign = "center";
-      ctx.fillText(label, x + barWidth / 2, height - 16);
+      drawWrappedLabel(ctx, label, x + barWidth / 2, labelTop, Math.max(46, barWidth + 8), 2);
       ctx.fillStyle = options.theme.ink;
       ctx.font = "700 13px system-ui";
-      ctx.fillText(String(value), x + barWidth / 2, height - pad - barHeight - 8);
+      ctx.fillText(String(value), x + barWidth / 2, barBottom - barHeight - 8);
     });
   });
 }
@@ -155,6 +157,53 @@ function drawEmptyState(ctx: CanvasRenderingContext2D, width: number, height: nu
   ctx.font = "14px system-ui";
   ctx.textAlign = "center";
   ctx.fillText(text, width / 2, height / 2);
+}
+
+function drawWrappedLabel(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  maxLines: number,
+): void {
+  const words = label
+    .replace(/([/-])/g, "$1 ")
+    .split(/\s+/)
+    .filter(Boolean);
+  const lines: string[] = [];
+
+  for (const word of words) {
+    const current = lines[lines.length - 1] || "";
+    const next = current ? `${current} ${word}` : word;
+    if (!current) {
+      lines.push(word);
+      continue;
+    }
+    if (ctx.measureText(next).width <= maxWidth) {
+      lines[lines.length - 1] = next;
+      continue;
+    }
+    if (lines.length < maxLines) {
+      lines.push(word);
+    } else {
+      lines[maxLines - 1] = ellipsize(ctx, `${lines[maxLines - 1]} ${word}`, maxWidth);
+    }
+  }
+
+  const safeLines = lines.slice(0, maxLines);
+  safeLines.forEach((line, index) => {
+    ctx.fillText(index === maxLines - 1 ? ellipsize(ctx, line, maxWidth) : line, x, y + index * 13);
+  });
+}
+
+function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let value = text;
+  while (value.length > 1 && ctx.measureText(`${value}…`).width > maxWidth) {
+    value = value.slice(0, -1);
+  }
+  return `${value.trim()}…`;
 }
 
 function drawAxisLabels(

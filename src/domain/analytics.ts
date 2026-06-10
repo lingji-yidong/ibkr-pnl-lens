@@ -1,26 +1,33 @@
-import { parseFlexXml } from "./flexXml";
+import { parseFlexXml } from "./flexXml.js";
 import type {
   AssetGroup,
   AssetGroupSummary,
   ClosedTrade,
+  ClosedPositionSlice,
+  DirectionSummary,
   DailyPnl,
   FlexOrder,
   FlexTrade,
+  HoldingBucket,
+  HoldingPeriodSummary,
   MetricSummary,
   OptionUnderlyingDaySummary,
   ParsedStatement,
+  PositionDirection,
   PeriodPerformance,
   SymbolSummary,
-} from "./types";
+} from "./types.js";
 
 export function parseIbkrStatement(text: string, selectedAccountIndex = 0): ParsedStatement {
   const flex = parseFlexXml(text, selectedAccountIndex);
   const closedTrades = flex.trades.filter(isClosedTrade);
   const canceledOrders = flex.orders.filter(isCanceledOrder);
+  const positionAnalytics = buildPositionAnalytics(flex.trades);
   const metrics = buildMetrics({
     trades: flex.trades,
     closedTrades,
     canceledOrders,
+    closedPositionSlices: positionAnalytics.closedPositionSlices,
   });
 
   return {
@@ -38,6 +45,9 @@ export function parseIbkrStatement(text: string, selectedAccountIndex = 0): Pars
     assetGroups: buildAssetGroups(closedTrades),
     optionUnderlyingDays: buildOptionUnderlyingDays(closedTrades),
     optionTrades: buildOptionTrades(closedTrades),
+    closedPositionSlices: positionAnalytics.closedPositionSlices,
+    holdingPeriods: positionAnalytics.holdingPeriods,
+    directionSummaries: positionAnalytics.directionSummaries,
   };
 }
 
@@ -60,10 +70,12 @@ function buildMetrics({
   trades,
   closedTrades,
   canceledOrders,
+  closedPositionSlices,
 }: {
   trades: FlexTrade[];
   closedTrades: ClosedTrade[];
   canceledOrders: FlexOrder[];
+  closedPositionSlices: ClosedPositionSlice[];
 }): MetricSummary {
   const pnls = closedTrades.map((trade) => trade.realizedPnl).filter((value) => value !== 0);
   const wins = pnls.filter((value) => value > 0);
@@ -78,6 +90,7 @@ function buildMetrics({
   const winRate = pnls.length ? wins.length / pnls.length : 0;
   const expectancy = pnls.length ? net / pnls.length : 0;
   const commissions = Math.abs(sum(trades.map((trade) => trade.commission)));
+  const medianHoldingDays = median(closedPositionSlices.map((slice) => slice.holdingDays));
 
   return {
     net,
@@ -102,7 +115,146 @@ function buildMetrics({
     openPositions: 0,
     unrealizedPnl: 0,
     autoExpiryCount: closedTrades.filter((trade) => trade.autoExpiry).length,
+    medianHoldingDays,
+    holdingSampleCount: closedPositionSlices.length,
   };
+}
+
+interface PositionAnalytics {
+  closedPositionSlices: ClosedPositionSlice[];
+  holdingPeriods: HoldingPeriodSummary[];
+  directionSummaries: DirectionSummary[];
+}
+
+interface OpenPositionLot {
+  remaining: number;
+  direction: PositionDirection;
+  openedAt: Date | null;
+  openDay: string;
+}
+
+function buildPositionAnalytics(trades: FlexTrade[]): PositionAnalytics {
+  const stacks = new Map<string, OpenPositionLot[]>();
+  const closedPositionSlices: ClosedPositionSlice[] = [];
+
+  for (const trade of [...trades].sort((a, b) => tradeTime(a) - tradeTime(b))) {
+    const quantity = Math.abs(trade.quantity);
+    if (!quantity) continue;
+
+    const key = positionKey(trade);
+    if (!trade.close) {
+      const stack = stacks.get(key) || [];
+      stack.push({
+        remaining: quantity,
+        direction: trade.quantity >= 0 ? "long" : "short",
+        openedAt: trade.date,
+        openDay: trade.day,
+      });
+      stacks.set(key, stack);
+      continue;
+    }
+
+    const stack = stacks.get(key) || [];
+    let remaining = quantity;
+    while (remaining > 0 && stack.length) {
+      const lot = stack[stack.length - 1];
+      if (!lot) break;
+      const matched = Math.min(remaining, lot.remaining);
+      const pnl = quantity ? trade.realizedPnl * (matched / quantity) : trade.realizedPnl;
+      const holdingDays = holdingDaysBetween(lot.openedAt, trade.date);
+      if (holdingDays !== null) {
+        closedPositionSlices.push({
+          symbol: trade.displaySymbol || trade.rawSymbol || "",
+          assetClass: trade.assetClass,
+          direction: lot.direction,
+          openDay: lot.openDay,
+          closeDay: trade.day,
+          holdingDays,
+          quantity: matched,
+          pnl,
+        });
+      }
+      lot.remaining -= matched;
+      remaining -= matched;
+      if (lot.remaining <= 1e-8) stack.pop();
+    }
+    stacks.set(key, stack);
+  }
+
+  return {
+    closedPositionSlices,
+    holdingPeriods: buildHoldingPeriods(closedPositionSlices),
+    directionSummaries: buildDirectionSummaries(closedPositionSlices),
+  };
+}
+
+function positionKey(trade: FlexTrade): string {
+  return [
+    trade.currency,
+    trade.rawSymbol || trade.displaySymbol,
+    trade.expiry,
+    trade.putCall,
+    trade.strike,
+  ].join("|");
+}
+
+function tradeTime(trade: FlexTrade): number {
+  return trade.date?.getTime() ?? 0;
+}
+
+function holdingDaysBetween(openedAt: Date | null, closedAt: Date | null): number | null {
+  if (!openedAt || !closedAt) return null;
+  const diff = closedAt.getTime() - openedAt.getTime();
+  if (!Number.isFinite(diff) || diff < 0) return null;
+  return Math.max(0, diff / 86_400_000);
+}
+
+function buildHoldingPeriods(slices: ClosedPositionSlice[]): HoldingPeriodSummary[] {
+  const byBucket = new Map<HoldingBucket, ClosedPositionSlice[]>();
+  for (const slice of slices) {
+    const bucket = holdingBucket(slice.holdingDays);
+    byBucket.set(bucket, [...(byBucket.get(bucket) || []), slice]);
+  }
+
+  const order: HoldingBucket[] = ["intraday", "swing", "position", "long_term"];
+  return order
+    .filter((bucket) => byBucket.has(bucket))
+    .map((bucket) => summarizePositionSlices(bucket, byBucket.get(bucket) || []));
+}
+
+function buildDirectionSummaries(slices: ClosedPositionSlice[]): DirectionSummary[] {
+  const byDirection = new Map<PositionDirection, ClosedPositionSlice[]>();
+  for (const slice of slices) {
+    byDirection.set(slice.direction, [...(byDirection.get(slice.direction) || []), slice]);
+  }
+
+  return (["long", "short"] as const)
+    .filter((direction) => byDirection.has(direction))
+    .map((direction) => ({
+      direction,
+      ...summarizePositionSliceValues(byDirection.get(direction) || []),
+    }));
+}
+
+function summarizePositionSlices(bucket: HoldingBucket, slices: ClosedPositionSlice[]): HoldingPeriodSummary {
+  return {
+    bucket,
+    ...summarizePositionSliceValues(slices),
+  };
+}
+
+function summarizePositionSliceValues(slices: ClosedPositionSlice[]) {
+  return {
+    ...summarizePnls(slices.map((slice) => slice.pnl).filter((value) => value !== 0)),
+    medianHoldingDays: median(slices.map((slice) => slice.holdingDays)),
+  };
+}
+
+function holdingBucket(days: number): HoldingBucket {
+  if (days < 1) return "intraday";
+  if (days <= 7) return "swing";
+  if (days <= 30) return "position";
+  return "long_term";
 }
 
 function buildDaily(closedTrades: ClosedTrade[]): DailyPnl[] {
@@ -275,4 +427,12 @@ function sum(values: number[]): number {
 
 function avg(values: number[]): number {
   return values.length ? sum(values) / values.length : 0;
+}
+
+function median(values: number[]): number {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return 0;
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2) return sorted[middle] || 0;
+  return ((sorted[middle - 1] || 0) + (sorted[middle] || 0)) / 2;
 }

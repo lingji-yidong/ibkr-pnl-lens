@@ -1,4 +1,4 @@
-import type { OptionUnderlyingDaySummary, ParsedStatement } from "../domain/types";
+import type { OptionUnderlyingDaySummary, ParsedStatement } from "../domain/types.js";
 
 export type AdviceGroup = "discipline" | "bestLoserWins" | "offlineAdvice";
 export type AdviceSeverity = "info" | "warning" | "danger";

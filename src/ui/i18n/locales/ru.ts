@@ -1,5 +1,5 @@
-import type { Translations } from "../keys";
-import { en } from "./en";
+import type { Translations } from "../keys.js";
+import { en } from "./en.js";
 
 export const ru = {
   ...en,
@@ -21,6 +21,7 @@ export const ru = {
   expectancy: "Ожидание",
   executionRecords: "Исполнения",
   canceledOrders: "Отмененные заявки",
+  medianHoldingDays: "Медиана дней удержания",
   commissionDrag: "Комиссии",
   closedTradeSum: "Итог закрытых сделок",
   grossProfitLoss: "Валовая прибыль / убыток",
@@ -29,6 +30,19 @@ export const ru = {
   flexTradeRecords: "Записи Trade в Flex XML",
   flexCanceledRecords: "Отмененные записи Order в Flex XML",
   noCanceledRecords: "Отмененных заявок нет",
+  holdingReview: "Holding",
+  holdingReviewTitle: "Анализ удержания и payoff",
+  holdingReviewHint: "Сопоставляет открытия и закрытия, затем сравнивает PF, payoff и долю побед по срокам удержания.",
+  holdingPeriod: "Срок удержания",
+  holdingIntraday: "Внутри дня",
+  holdingSwing: "1-7 дней",
+  holdingPosition: "8-30 дней",
+  holdingLongTerm: "30+ дней",
+  directionReview: "Direction",
+  directionReviewTitle: "Анализ long / short",
+  directionReviewHint: "Разделяет закрытые сделки по направлению открытия, чтобы показать более сильную сторону.",
+  longPosition: "Long",
+  shortPosition: "Short",
   dailyRealized: "Дневной реализ. P/L",
   winLossDistribution: "Распределение побед/убытков",
   periodHint: "Зеленые столбцы: прибыль, красные: убыток. PF и payoff указаны в таблице ниже.",

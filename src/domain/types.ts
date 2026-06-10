@@ -87,6 +87,52 @@ export interface MetricSummary {
   openPositions: number;
   unrealizedPnl: number;
   autoExpiryCount: number;
+  medianHoldingDays: number;
+  holdingSampleCount: number;
+}
+
+export type PositionDirection = "long" | "short";
+export type HoldingBucket = "intraday" | "swing" | "position" | "long_term";
+
+export interface ClosedPositionSlice {
+  symbol: string;
+  assetClass: AssetClass;
+  direction: PositionDirection;
+  openDay: string;
+  closeDay: string;
+  holdingDays: number;
+  quantity: number;
+  pnl: number;
+}
+
+export interface HoldingPeriodSummary {
+  bucket: HoldingBucket;
+  medianHoldingDays: number;
+  pnl: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+  winRate: number;
+  count: number;
+  wins: number;
+  losses: number;
+  average: number;
+}
+
+export interface DirectionSummary {
+  direction: PositionDirection;
+  medianHoldingDays: number;
+  pnl: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+  winRate: number;
+  count: number;
+  wins: number;
+  losses: number;
+  average: number;
 }
 
 export interface DailyPnl {
@@ -166,4 +212,7 @@ export interface ParsedStatement {
   assetGroups: AssetGroupSummary[];
   optionUnderlyingDays: OptionUnderlyingDaySummary[];
   optionTrades: ClosedTrade[];
+  closedPositionSlices: ClosedPositionSlice[];
+  holdingPeriods: HoldingPeriodSummary[];
+  directionSummaries: DirectionSummary[];
 }

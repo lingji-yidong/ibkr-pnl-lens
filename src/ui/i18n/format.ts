@@ -1,8 +1,8 @@
-import { money, percent, ratio } from "../../domain/format";
-import type { Insight } from "../render";
-import type { AdviceSignal } from "../advice";
-import type { Locale, MessageFunctionKey, MessageParams, TranslationKey } from "./keys";
-import { t } from "./index";
+import { money, percent, ratio } from "../../domain/format.js";
+import type { Insight } from "../render.js";
+import type { AdviceSignal } from "../advice.js";
+import type { Locale, MessageFunctionKey, MessageParams, TranslationKey } from "./keys.js";
+import { t } from "./index.js";
 
 type Formatter<K extends MessageFunctionKey> = (locale: Locale, params: MessageParams[K]) => string;
 
@@ -25,6 +25,9 @@ const formatters: { [K in MessageFunctionKey]: Formatter<K> } = {
   },
   datePlusCount(_locale, params) {
     return params.count > 1 ? `${params.date} +${params.count - 1}` : params.date;
+  },
+  holdingSampleSummary(locale, params) {
+    return `${params.count} ${t(locale, "trades")}`;
   },
   importError(locale, params) {
     return `${t(locale, "importFailed")}: ${params.message}`;

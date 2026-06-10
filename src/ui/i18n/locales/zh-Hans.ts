@@ -1,4 +1,4 @@
-import type { Translations } from "../keys";
+import type { Translations } from "../keys.js";
 
 export const zhHans = {
   eyebrow: "IBKR Activity Statement",
@@ -22,6 +22,7 @@ export const zhHans = {
   expectancy: "期望值",
   executionRecords: "成交记录",
   canceledOrders: "取消委托",
+  medianHoldingDays: "持仓中位数",
   commissionDrag: "佣金拖累",
   closedTradeSum: "逐笔平仓合计",
   grossProfitLoss: "总盈利 / 总亏损",
@@ -30,6 +31,19 @@ export const zhHans = {
   flexTradeRecords: "Flex XML 的 Trade 记录",
   flexCanceledRecords: "Flex XML 的 Order 取消记录",
   noCanceledRecords: "此 XML 未提供取消委托",
+  holdingReview: "Holding",
+  holdingReviewTitle: "交易持仓与盈亏比分析",
+  holdingReviewHint: "按开平仓匹配后比较不同持仓周期的 PF、盈亏比与胜率。",
+  holdingPeriod: "持仓周期",
+  holdingIntraday: "日内",
+  holdingSwing: "1-7 天",
+  holdingPosition: "8-30 天",
+  holdingLongTerm: "30 天以上",
+  directionReview: "Direction",
+  directionReviewTitle: "多空仓位分析",
+  directionReviewHint: "按开仓方向拆分多头与空头，检查哪一侧更有优势。",
+  longPosition: "多头",
+  shortPosition: "空头",
   equityCurve: "Equity Curve",
   dailyRealized: "每日已实现损益",
   payoff: "Payoff",

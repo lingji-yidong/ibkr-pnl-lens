@@ -1,4 +1,4 @@
-import type { DomainErrorCode, FlexOrder, FlexTrade, StatementAccountSummary, StatementProfile } from "./types";
+import type { DomainErrorCode, FlexOrder, FlexTrade, StatementAccountSummary, StatementProfile } from "./types.js";
 
 export class DomainError extends Error {
   constructor(public readonly code: DomainErrorCode) {
