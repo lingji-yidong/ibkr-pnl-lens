@@ -45,6 +45,7 @@ export interface FlexTrade {
   autoExpiry: boolean;
   closeReason: "" | "expired" | "exercise_or_assignment";
   transactionType: string;
+  strategyGroupId: string;
   expiry: string;
   putCall: string;
   strike: string;
@@ -91,7 +92,7 @@ export interface MetricSummary {
   holdingSampleCount: number;
 }
 
-export type PositionDirection = "long" | "short";
+export type PositionDirection = "long" | "short" | "neutral";
 export type HoldingBucket = "intraday" | "swing" | "position" | "long_term";
 
 export interface ClosedPositionSlice {
@@ -103,6 +104,12 @@ export interface ClosedPositionSlice {
   holdingDays: number;
   quantity: number;
   pnl: number;
+  underlyingSymbol?: string;
+  expiry?: string;
+  putCall?: string;
+  strike?: number;
+  openingQuantity?: number;
+  strategyGroupId?: string;
 }
 
 export interface HoldingPeriodSummary {

@@ -64,12 +64,62 @@ const xmlWithLongShortHolding = `
 </FlexStatement>
 `;
 
+const xmlWithBoughtPutExposure = `
+<FlexStatement accountId="DEMO-PUT" fromDate="20260101" toDate="20260105">
+  <Trades>
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00450000" description="SPY 16JAN26 450 P" underlyingSymbol="SPY" dateTime="20260102;100000" tradeDate="20260102" quantity="1" tradePrice="3" proceeds="-300" ibCommission="0" netCash="-300" cost="300" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Buy" expiry="20260116" putCall="P" strike="450" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00450000" description="SPY 16JAN26 450 P" underlyingSymbol="SPY" dateTime="20260105;100000" tradeDate="20260105" quantity="-1" tradePrice="5" proceeds="500" ibCommission="0" netCash="500" cost="-300" fifoPnlRealized="200" mtmPnl="200" openCloseIndicator="C" transactionType="Sell" expiry="20260116" putCall="P" strike="450" multiplier="100" />
+  </Trades>
+</FlexStatement>
+`;
+
+const xmlWithBullPutSpread = `
+<FlexStatement accountId="DEMO-SPREAD" fromDate="20260101" toDate="20260105">
+  <Trades>
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00450000" description="SPY 16JAN26 450 P" underlyingSymbol="SPY" dateTime="20260102;100000" tradeDate="20260102" quantity="-1" tradePrice="5" proceeds="500" ibCommission="0" netCash="500" cost="-500" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Sell" orderID="SPREAD-OPEN" expiry="20260116" putCall="P" strike="450" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00440000" description="SPY 16JAN26 440 P" underlyingSymbol="SPY" dateTime="20260102;100001" tradeDate="20260102" quantity="1" tradePrice="2" proceeds="-200" ibCommission="0" netCash="-200" cost="200" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Buy" orderID="SPREAD-OPEN" expiry="20260116" putCall="P" strike="440" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00450000" description="SPY 16JAN26 450 P" underlyingSymbol="SPY" dateTime="20260105;100000" tradeDate="20260105" quantity="1" tradePrice="3" proceeds="-300" ibCommission="0" netCash="-300" cost="500" fifoPnlRealized="200" mtmPnl="200" openCloseIndicator="C" transactionType="Buy" orderID="SPREAD-OPEN" expiry="20260116" putCall="P" strike="450" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00440000" description="SPY 16JAN26 440 P" underlyingSymbol="SPY" dateTime="20260105;100001" tradeDate="20260105" quantity="-1" tradePrice="1" proceeds="100" ibCommission="0" netCash="100" cost="-200" fifoPnlRealized="-100" mtmPnl="-100" openCloseIndicator="C" transactionType="Sell" orderID="SPREAD-OPEN" expiry="20260116" putCall="P" strike="440" multiplier="100" />
+  </Trades>
+</FlexStatement>
+`;
+
+const xmlWithIronCondor = `
+<FlexStatement accountId="DEMO-CONDOR" fromDate="20260101" toDate="20260105">
+  <Trades>
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00440000" description="SPY 16JAN26 440 P" underlyingSymbol="SPY" dateTime="20260102;100000" tradeDate="20260102" quantity="-1" tradePrice="2" proceeds="200" ibCommission="0" netCash="200" cost="-200" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Sell" orderID="CONDOR-OPEN" expiry="20260116" putCall="P" strike="440" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00430000" description="SPY 16JAN26 430 P" underlyingSymbol="SPY" dateTime="20260102;100001" tradeDate="20260102" quantity="1" tradePrice="1" proceeds="-100" ibCommission="0" netCash="-100" cost="100" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Buy" orderID="CONDOR-OPEN" expiry="20260116" putCall="P" strike="430" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116C00460000" description="SPY 16JAN26 460 C" underlyingSymbol="SPY" dateTime="20260102;100002" tradeDate="20260102" quantity="-1" tradePrice="2" proceeds="200" ibCommission="0" netCash="200" cost="-200" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Sell" orderID="CONDOR-OPEN" expiry="20260116" putCall="C" strike="460" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116C00470000" description="SPY 16JAN26 470 C" underlyingSymbol="SPY" dateTime="20260102;100003" tradeDate="20260102" quantity="1" tradePrice="1" proceeds="-100" ibCommission="0" netCash="-100" cost="100" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Buy" orderID="CONDOR-OPEN" expiry="20260116" putCall="C" strike="470" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00440000" description="SPY 16JAN26 440 P" underlyingSymbol="SPY" dateTime="20260105;100000" tradeDate="20260105" quantity="1" tradePrice="1" proceeds="-100" ibCommission="0" netCash="-100" cost="200" fifoPnlRealized="100" mtmPnl="100" openCloseIndicator="C" transactionType="Buy" orderID="CONDOR-OPEN" expiry="20260116" putCall="P" strike="440" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00430000" description="SPY 16JAN26 430 P" underlyingSymbol="SPY" dateTime="20260105;100001" tradeDate="20260105" quantity="-1" tradePrice="0.5" proceeds="50" ibCommission="0" netCash="50" cost="-100" fifoPnlRealized="-50" mtmPnl="-50" openCloseIndicator="C" transactionType="Sell" orderID="CONDOR-OPEN" expiry="20260116" putCall="P" strike="430" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116C00460000" description="SPY 16JAN26 460 C" underlyingSymbol="SPY" dateTime="20260105;100002" tradeDate="20260105" quantity="1" tradePrice="1" proceeds="-100" ibCommission="0" netCash="-100" cost="200" fifoPnlRealized="100" mtmPnl="100" openCloseIndicator="C" transactionType="Buy" orderID="CONDOR-OPEN" expiry="20260116" putCall="C" strike="460" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116C00470000" description="SPY 16JAN26 470 C" underlyingSymbol="SPY" dateTime="20260105;100003" tradeDate="20260105" quantity="-1" tradePrice="0.5" proceeds="50" ibCommission="0" netCash="50" cost="-100" fifoPnlRealized="-50" mtmPnl="-50" openCloseIndicator="C" transactionType="Sell" orderID="CONDOR-OPEN" expiry="20260116" putCall="C" strike="470" multiplier="100" />
+  </Trades>
+</FlexStatement>
+`;
+
+const xmlWithIndependentSameDayOptions = `
+<FlexStatement accountId="DEMO-SINGLE" fromDate="20260101" toDate="20260105">
+  <Trades>
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00450000" description="SPY 16JAN26 450 P" underlyingSymbol="SPY" dateTime="20260102;100000" tradeDate="20260102" quantity="1" tradePrice="3" proceeds="-300" ibCommission="0" netCash="-300" cost="300" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Buy" expiry="20260116" putCall="P" strike="450" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116C00460000" description="SPY 16JAN26 460 C" underlyingSymbol="SPY" dateTime="20260102;100001" tradeDate="20260102" quantity="1" tradePrice="4" proceeds="-400" ibCommission="0" netCash="-400" cost="400" fifoPnlRealized="0" mtmPnl="0" openCloseIndicator="O" transactionType="Buy" expiry="20260116" putCall="C" strike="460" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116P00450000" description="SPY 16JAN26 450 P" underlyingSymbol="SPY" dateTime="20260105;100000" tradeDate="20260105" quantity="-1" tradePrice="5" proceeds="500" ibCommission="0" netCash="500" cost="-300" fifoPnlRealized="200" mtmPnl="200" openCloseIndicator="C" transactionType="Sell" expiry="20260116" putCall="P" strike="450" multiplier="100" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260116C00460000" description="SPY 16JAN26 460 C" underlyingSymbol="SPY" dateTime="20260105;100001" tradeDate="20260105" quantity="-1" tradePrice="6" proceeds="600" ibCommission="0" netCash="600" cost="-400" fifoPnlRealized="200" mtmPnl="200" openCloseIndicator="C" transactionType="Sell" expiry="20260116" putCall="C" strike="460" multiplier="100" />
+  </Trades>
+</FlexStatement>
+`;
+
 const report = parseIbkrStatement(xml);
 const multiAccountReport = parseIbkrStatement(multiAccountXml);
 const secondAccountReport = parseIbkrStatement(multiAccountXml, 1);
 const misleadingLotReport = parseIbkrStatement(xmlWithMisleadingClosedLot);
 const multipleMetaLotsReport = parseIbkrStatement(xmlWithMultipleMetaOptionLots);
 const longShortHoldingReport = parseIbkrStatement(xmlWithLongShortHolding);
+const boughtPutExposureReport = parseIbkrStatement(xmlWithBoughtPutExposure);
+const bullPutSpreadReport = parseIbkrStatement(xmlWithBullPutSpread);
+const ironCondorReport = parseIbkrStatement(xmlWithIronCondor);
+const independentSameDayOptionsReport = parseIbkrStatement(xmlWithIndependentSameDayOptions);
 
 // Basic parsing
 assert.ok(report.profile.maskedAccountId.includes("*"));
@@ -100,6 +150,16 @@ assert.equal(round2(longShortHoldingReport.metrics.medianHoldingDays), 1.6);
 assert.deepEqual(longShortHoldingReport.directionSummaries.map((row) => row.direction), ["long", "short"]);
 assert.equal(longShortHoldingReport.holdingPeriods.some((row) => row.bucket === "intraday"), true);
 assert.equal(longShortHoldingReport.holdingPeriods.some((row) => row.bucket === "swing"), true);
+assert.equal(boughtPutExposureReport.closedPositionSlices[0]?.direction, "short");
+assert.deepEqual(boughtPutExposureReport.directionSummaries.map((row) => row.direction), ["short"]);
+assert.equal(bullPutSpreadReport.closedPositionSlices.length, 1);
+assert.equal(bullPutSpreadReport.closedPositionSlices[0]?.direction, "long");
+assert.deepEqual(bullPutSpreadReport.directionSummaries.map((row) => row.direction), ["long"]);
+assert.equal(ironCondorReport.closedPositionSlices.length, 1);
+assert.equal(ironCondorReport.closedPositionSlices[0]?.direction, "neutral");
+assert.deepEqual(ironCondorReport.directionSummaries.map((row) => row.direction), ["neutral"]);
+assert.equal(independentSameDayOptionsReport.closedPositionSlices.length, 2);
+assert.deepEqual(independentSameDayOptionsReport.directionSummaries.map((row) => row.direction), ["long", "short"]);
 
 // Metrics should be internally valid
 assert.ok(Number.isFinite(report.metrics.net));

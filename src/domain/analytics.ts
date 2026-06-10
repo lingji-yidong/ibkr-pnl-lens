@@ -131,6 +131,7 @@ interface OpenPositionLot {
   direction: PositionDirection;
   openedAt: Date | null;
   openDay: string;
+  openingQuantity: number;
 }
 
 function buildPositionAnalytics(trades: FlexTrade[]): PositionAnalytics {
@@ -146,9 +147,10 @@ function buildPositionAnalytics(trades: FlexTrade[]): PositionAnalytics {
       const stack = stacks.get(key) || [];
       stack.push({
         remaining: quantity,
-        direction: trade.quantity >= 0 ? "long" : "short",
+        direction: positionDirectionForExposure(trade),
         openedAt: trade.date,
         openDay: trade.day,
+        openingQuantity: trade.quantity,
       });
       stacks.set(key, stack);
       continue;
@@ -172,6 +174,12 @@ function buildPositionAnalytics(trades: FlexTrade[]): PositionAnalytics {
           holdingDays,
           quantity: matched,
           pnl,
+          underlyingSymbol: trade.underlyingSymbol || extractUnderlying(trade.displaySymbol),
+          expiry: trade.expiry,
+          putCall: trade.putCall,
+          strike: parseNumber(trade.strike),
+          openingQuantity: Math.sign(lot.openingQuantity) * matched,
+          strategyGroupId: trade.strategyGroupId,
         });
       }
       lot.remaining -= matched;
@@ -181,10 +189,12 @@ function buildPositionAnalytics(trades: FlexTrade[]): PositionAnalytics {
     stacks.set(key, stack);
   }
 
+  const strategySlices = combineOptionStrategySlices(closedPositionSlices);
+
   return {
-    closedPositionSlices,
-    holdingPeriods: buildHoldingPeriods(closedPositionSlices),
-    directionSummaries: buildDirectionSummaries(closedPositionSlices),
+    closedPositionSlices: strategySlices,
+    holdingPeriods: buildHoldingPeriods(strategySlices),
+    directionSummaries: buildDirectionSummaries(strategySlices),
   };
 }
 
@@ -200,6 +210,126 @@ function positionKey(trade: FlexTrade): string {
 
 function tradeTime(trade: FlexTrade): number {
   return trade.date?.getTime() ?? 0;
+}
+
+function positionDirectionForExposure(trade: FlexTrade): PositionDirection {
+  const quantityDirection: PositionDirection = trade.quantity >= 0 ? "long" : "short";
+  const optionSide = trade.putCall.trim().toUpperCase();
+
+  if (optionSide === "P" || optionSide === "PUT") {
+    return quantityDirection === "long" ? "short" : "long";
+  }
+
+  return quantityDirection;
+}
+
+function combineOptionStrategySlices(slices: ClosedPositionSlice[]): ClosedPositionSlice[] {
+  const grouped = new Map<string, ClosedPositionSlice[]>();
+  const standalone: ClosedPositionSlice[] = [];
+
+  for (const slice of slices) {
+    const key = optionStrategyKey(slice);
+    if (!key) {
+      standalone.push(slice);
+      continue;
+    }
+    grouped.set(key, [...(grouped.get(key) || []), slice]);
+  }
+
+  const combined = [...grouped.values()].map((group) => {
+    if (group.length === 1) return group[0] as ClosedPositionSlice;
+    return combineOptionStrategyGroup(group);
+  });
+
+  return [...standalone, ...combined].sort((a, b) => {
+    const byCloseDay = a.closeDay.localeCompare(b.closeDay);
+    if (byCloseDay) return byCloseDay;
+    return a.symbol.localeCompare(b.symbol);
+  });
+}
+
+function optionStrategyKey(slice: ClosedPositionSlice): string | null {
+  if (!isOptionSlice(slice)) return null;
+  if (!slice.strategyGroupId) return null;
+  const underlying = slice.underlyingSymbol || extractUnderlying(slice.symbol);
+  if (!underlying || !slice.expiry || !slice.openDay || !slice.closeDay) return null;
+  return [slice.strategyGroupId, underlying, slice.expiry, slice.openDay, slice.closeDay].join("|");
+}
+
+function isOptionSlice(slice: ClosedPositionSlice): boolean {
+  const source = `${slice.assetClass} ${slice.putCall || ""} ${slice.expiry || ""} ${slice.strike || ""}`.toLowerCase();
+  return source.includes("option") || Boolean(slice.putCall || slice.expiry || slice.strike);
+}
+
+function combineOptionStrategyGroup(group: ClosedPositionSlice[]): ClosedPositionSlice {
+  const first = group[0] as ClosedPositionSlice;
+  const pnl = sum(group.map((slice) => slice.pnl));
+  const quantity = sum(group.map((slice) => slice.quantity));
+
+  return {
+    symbol: strategySymbol(group),
+    assetClass: first.assetClass,
+    direction: optionStrategyDirection(group),
+    openDay: first.openDay,
+    closeDay: first.closeDay,
+    holdingDays: median(group.map((slice) => slice.holdingDays)),
+    quantity,
+    pnl,
+    underlyingSymbol: first.underlyingSymbol,
+    expiry: first.expiry,
+    strategyGroupId: first.strategyGroupId,
+  };
+}
+
+function strategySymbol(group: ClosedPositionSlice[]): string {
+  const first = group[0] as ClosedPositionSlice;
+  const underlying = first.underlyingSymbol || extractUnderlying(first.symbol);
+  return `${underlying} ${first.expiry || ""} strategy`.trim();
+}
+
+function optionStrategyDirection(group: ClosedPositionSlice[]): PositionDirection {
+  const strikes = group.map((slice) => slice.strike || 0).filter((strike) => strike > 0).sort((a, b) => a - b);
+  if (strikes.length < 2) {
+    const exposure = sum(group.map((slice) => directionScore(slice.direction) * slice.quantity));
+    return scoredDirection(exposure);
+  }
+
+  const minStrike = strikes[0] || 0;
+  const maxStrike = strikes[strikes.length - 1] || minStrike;
+  const width = Math.max(maxStrike - minStrike, 1);
+  const lowPayoff = optionStrategyPayoff(group, Math.max(0, minStrike - width * 2));
+  const highPayoff = optionStrategyPayoff(group, maxStrike + width * 2);
+
+  return scoredDirection(highPayoff - lowPayoff);
+}
+
+function optionStrategyPayoff(group: ClosedPositionSlice[], price: number): number {
+  return sum(group.map((slice) => {
+    const strike = slice.strike || 0;
+    const signedQuantity = slice.openingQuantity || 0;
+    const side = (slice.putCall || "").trim().toUpperCase();
+    if (!strike || !signedQuantity) return 0;
+    if (side === "C" || side === "CALL") return Math.max(price - strike, 0) * signedQuantity;
+    if (side === "P" || side === "PUT") return Math.max(strike - price, 0) * signedQuantity;
+    return 0;
+  }));
+}
+
+function scoredDirection(score: number): PositionDirection {
+  if (score > 1e-8) return "long";
+  if (score < -1e-8) return "short";
+  return "neutral";
+}
+
+function directionScore(direction: PositionDirection): number {
+  if (direction === "long") return 1;
+  if (direction === "short") return -1;
+  return 0;
+}
+
+function parseNumber(value: string): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function holdingDaysBetween(openedAt: Date | null, closedAt: Date | null): number | null {
@@ -228,7 +358,7 @@ function buildDirectionSummaries(slices: ClosedPositionSlice[]): DirectionSummar
     byDirection.set(slice.direction, [...(byDirection.get(slice.direction) || []), slice]);
   }
 
-  return (["long", "short"] as const)
+  return (["long", "short", "neutral"] as const)
     .filter((direction) => byDirection.has(direction))
     .map((direction) => ({
       direction,

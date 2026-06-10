@@ -116,6 +116,7 @@ function normalizeFlexTrade(row: Record<string, string>): FlexTrade {
     autoExpiry: notes.includes("Ep"),
     closeReason: notes.includes("Ep") ? "expired" : notes.includes("Ex") ? "exercise_or_assignment" : "",
     transactionType: row.transactionType || "",
+    strategyGroupId: strategyGroupId(row),
     expiry: row.expiry || "",
     putCall: row.putCall || "",
     strike: row.strike || "",
@@ -191,6 +192,27 @@ function tradeTime(trade: FlexTrade): number {
 function cashFlow(row: Record<string, string>): number {
   if (row.netCash) return num(row.netCash);
   return num(row.proceeds) + num(row.ibCommission);
+}
+
+function strategyGroupId(row: Record<string, string>): string {
+  const source = [
+    row.comboId,
+    row.comboID,
+    row.comboTradeId,
+    row.comboTradeID,
+    row.strategyId,
+    row.strategyID,
+    row.spreadId,
+    row.spreadID,
+    row.parentOrderId,
+    row.parentOrderID,
+    row.ibOrderId,
+    row.ibOrderID,
+    row.orderId,
+    row.orderID,
+  ].find((value) => value && value.trim());
+
+  return source?.trim() || "";
 }
 
 function looksLikeXml(text: string): boolean {

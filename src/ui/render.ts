@@ -477,7 +477,9 @@ function holdingBucketName(bucket: HoldingBucket, locale: Locale): string {
 }
 
 function directionName(direction: PositionDirection, locale: Locale): string {
-  return direction === "long" ? t(locale, "longPosition") : t(locale, "shortPosition");
+  if (direction === "long") return t(locale, "longPosition");
+  if (direction === "short") return t(locale, "shortPosition");
+  return t(locale, "neutralPosition");
 }
 
 function cssChartTheme() {

@@ -64,6 +64,7 @@ export const baseTranslationKeys = [
   "directionReviewHint",
   "longPosition",
   "shortPosition",
+  "neutralPosition",
   "equityCurve",
   "dailyRealized",
   "payoff",
