@@ -4,6 +4,10 @@ Fully offline IBKR Flex XML analyzer for profit factor, payoff ratio, realized P
 
 This project is designed for traders who want a quick, private review of their Interactive Brokers activity data without sending statements, account identifiers, or API keys to any external service.
 
+## Demo
+
+![IBKR PnL Lens interface preview](demo/demo.png)
+
 ## Features
 
 - Upload an IBKR Flex XML file directly in the browser.

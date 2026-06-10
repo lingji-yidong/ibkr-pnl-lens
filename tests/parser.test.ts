@@ -192,6 +192,8 @@ assert.ok(report.monthly.every((row) => row.count === row.wins + row.losses));
 assert.ok(report.assetGroups.some((row) => row.group === "option"));
 assert.ok(report.assetGroups.some((row) => row.group === "stock"));
 assert.ok(report.optionUnderlyingDays.length > 0);
+assert.ok(report.closedPositionSlices.length > 0);
+assert.deepEqual(report.directionSummaries.map((row) => row.direction), ["long", "short"]);
 
 // Symbols should be parsed and cleaned
 assert.ok(report.symbols.length > 0);
