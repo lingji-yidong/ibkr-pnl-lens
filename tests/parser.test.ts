@@ -172,6 +172,10 @@ assert.ok(report.metrics.canceledOrderCount >= 0);
 assert.ok(report.daily.length > 0);
 assert.ok(report.weekly.length > 0);
 assert.ok(report.monthly.length > 0);
+assert.deepEqual(report.intradaySessions.map((row) => row.session), ["morning", "midday", "late"]);
+assert.equal(report.intradaySessions.find((row) => row.session === "midday")?.count, 1);
+assert.equal(round2(report.intradaySessions.find((row) => row.session === "midday")?.average || 0), -110);
+assert.equal(round2(report.intradaySessions.find((row) => row.session === "midday")?.medianPnl || 0), -110);
 
 // Weekly/monthly PnL should reconcile with total net PnL
 assert.equal(

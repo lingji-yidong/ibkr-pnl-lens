@@ -242,6 +242,7 @@ function getElements(): AppElements {
     periodColumnLabel: getElement("periodColumnLabel"),
     periodWeekly: getElement("periodWeekly"),
     periodMonthly: getElement("periodMonthly"),
+    intradaySessionRows: getElement("intradaySessionRows"),
     disciplineList: getElement("disciplineList"),
     bestLoserList: getElement("bestLoserList"),
     periodRows: getElement("periodRows"),

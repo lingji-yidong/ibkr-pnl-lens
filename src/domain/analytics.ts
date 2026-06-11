@@ -10,6 +10,8 @@ import type {
   FlexTrade,
   HoldingBucket,
   HoldingPeriodSummary,
+  IntradaySession,
+  IntradaySessionSummary,
   MetricSummary,
   OptionUnderlyingDaySummary,
   ParsedStatement,
@@ -41,6 +43,7 @@ export function parseIbkrStatement(text: string, selectedAccountIndex = 0): Pars
     daily: buildDaily(closedTrades),
     weekly: buildPeriodPerformance(closedTrades, weekLabel),
     monthly: buildPeriodPerformance(closedTrades, monthLabel),
+    intradaySessions: buildIntradaySessions(closedTrades),
     symbols: buildSymbols(closedTrades),
     assetGroups: buildAssetGroups(closedTrades),
     optionUnderlyingDays: buildOptionUnderlyingDays(closedTrades),
@@ -422,6 +425,40 @@ function buildPeriodPerformance(closedTrades: ClosedTrade[], getLabel: (trade: C
     label,
     ...summarizePnls(pnls),
   }));
+}
+
+function buildIntradaySessions(closedTrades: ClosedTrade[]): IntradaySessionSummary[] {
+  const bySession = new Map<IntradaySession, number[]>();
+  for (const trade of closedTrades) {
+    if (trade.realizedPnl === 0) continue;
+    const session = intradaySession(trade.date);
+    if (!session) continue;
+    bySession.set(session, [...(bySession.get(session) || []), trade.realizedPnl]);
+  }
+
+  const order: IntradaySession[] = ["morning", "midday", "late"];
+  return order
+    .filter((session) => bySession.has(session))
+    .map((session) => ({
+      session,
+      ...summarizeIntradayPnls(bySession.get(session) || []),
+    }));
+}
+
+function summarizeIntradayPnls(pnls: number[]): Omit<IntradaySessionSummary, "session"> {
+  return {
+    ...summarizePnls(pnls),
+    medianPnl: median(pnls),
+  };
+}
+
+function intradaySession(date: Date | null): IntradaySession | null {
+  if (!date) return null;
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  if (minutes >= 9 * 60 + 30 && minutes < 11 * 60 + 30) return "morning";
+  if (minutes >= 11 * 60 + 30 && minutes < 14 * 60) return "midday";
+  if (minutes >= 14 * 60 && minutes <= 16 * 60 + 15) return "late";
+  return null;
 }
 
 function weekLabel(trade: ClosedTrade): string {

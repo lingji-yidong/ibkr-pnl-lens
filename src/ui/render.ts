@@ -1,5 +1,5 @@
 import { escapeHtml, money, percent, ratio } from "../domain/format.js";
-import type { AssetGroup, AssetGroupSummary, ClosedTrade, DirectionSummary, HoldingBucket, HoldingPeriodSummary, ParsedStatement, PeriodPerformance, PositionDirection, SymbolSummary } from "../domain/types.js";
+import type { AssetGroup, AssetGroupSummary, ClosedTrade, DirectionSummary, HoldingBucket, HoldingPeriodSummary, IntradaySession, IntradaySessionSummary, ParsedStatement, PeriodPerformance, PositionDirection, SymbolSummary } from "../domain/types.js";
 import { buildAdviceSignals } from "./advice.js";
 import { drawDailyChart, drawDistributionChart, drawPeriodPerformanceChart } from "./chart.js";
 import type { Locale, TranslationKey } from "./i18n/index.js";
@@ -46,6 +46,7 @@ export interface AppElements {
   periodColumnLabel: HTMLElement;
   periodWeekly: HTMLButtonElement;
   periodMonthly: HTMLButtonElement;
+  intradaySessionRows: HTMLElement;
   disciplineList: HTMLElement;
   bestLoserList: HTMLElement;
   periodRows: HTMLElement;
@@ -80,8 +81,8 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
     [t(options.locale, "winRate"), percent(metrics.winRate), `${metrics.winCount} / ${metrics.lossCount}`],
     [t(options.locale, "payoffRatio"), ratio(metrics.payoffRatio), t(options.locale, "averageWinLoss"), thresholdTone(metrics.payoffRatio), thresholdStatusLabel(options.locale, metrics.payoffRatio)],
     [t(options.locale, "expectancy"), money(metrics.expectancy), t(options.locale, "perClosedTrade"), pnlTone(metrics.expectancy), statusLabel(options.locale, metrics.expectancy)],
-    [t(options.locale, "executionRecords"), String(metrics.executionCount), t(options.locale, "flexTradeRecords")],
-    [t(options.locale, "medianHoldingDays"), formatDays(metrics.medianHoldingDays, options.locale), formatMessage(options.locale, "holdingSampleSummary", { count: metrics.holdingSampleCount })],
+    intradayWeaknessCard(report.intradaySessions, options.locale),
+    [t(options.locale, "medianHoldingDays"), formatHoldingDuration(metrics.medianHoldingDays, options.locale), formatMessage(options.locale, "holdingSampleSummary", { count: metrics.holdingSampleCount })],
     [t(options.locale, "commissionDrag"), money(metrics.commissions), `${metrics.executionCount} ${t(options.locale, "executions")}`, "loss", t(options.locale, "costStatus")],
   ]);
 
@@ -129,6 +130,7 @@ export function renderPeriodSection(els: AppElements, report: ParsedStatement, o
 
   drawPeriodPerformanceChart(els.periodChart, periods, { locale: options.locale, theme: cssChartTheme() });
   renderPeriods(els.periodRows, sortRows(periods, options.sorts.period), 12, Boolean(options.sorts.period));
+  renderIntradaySessions(els.intradaySessionRows, report.intradaySessions, options.locale);
   updateSortButtons(options.sorts);
 }
 
@@ -148,17 +150,31 @@ export function translateStaticText(locale: Locale): void {
 }
 
 type MetricTone = "win" | "loss" | "neutral";
+type MetricCard = {
+  label: string;
+  value: string;
+  note: string;
+  tone?: MetricTone;
+  status?: string;
+  valueHtml?: string;
+};
 
-function metricCards(cards: Array<[string, string, string, MetricTone?, string?]>): string {
+function metricCards(cards: Array<[string, string, string, MetricTone?, string?] | MetricCard>): string {
   return cards
-    .map(([label, value, note, tone = "neutral", status]) => `
+    .map((card) => {
+      const normalized = Array.isArray(card)
+        ? { label: card[0], value: card[1], note: card[2], tone: card[3], status: card[4] }
+        : card;
+      const { label, value, note, tone = "neutral", status, valueHtml } = normalized;
+      return `
       <article class="metric-card ${tone}">
         <span>${escapeHtml(label)}</span>
-        <strong class="${tone}">${escapeHtml(value)}</strong>
+        <strong class="${tone}">${valueHtml || escapeHtml(value)}</strong>
         <small>${escapeHtml(note)}</small>
         ${status ? `<em>${escapeHtml(status)}</em>` : ""}
       </article>
-    `)
+    `;
+    })
     .join("");
 }
 
@@ -246,6 +262,28 @@ function renderPeriods(target: HTMLElement, periods: PeriodPerformance[], limit:
   }).join("");
 }
 
+function renderIntradaySessions(target: HTMLElement, rows: IntradaySessionSummary[], locale: Locale): void {
+  target.innerHTML = rows.map((row) => {
+    const tone = row.pnl >= 0 ? "win" : "loss";
+    return `
+      <tr>
+        <td>${intradaySessionLabel(row.session, locale)}</td>
+        <td class="num ${tone}">${money(row.pnl)}</td>
+        <td class="num ${row.medianPnl >= 0 ? "win" : "loss"}">${money(row.medianPnl)}</td>
+        <td class="num">${money(row.average)}</td>
+        <td class="num">${ratio(row.profitFactor)}</td>
+        <td class="num">${ratio(row.payoffRatio)}</td>
+        <td class="num">${percent(row.winRate)}</td>
+        <td class="num">${row.count}</td>
+      </tr>
+    `;
+  }).join("");
+
+  if (!rows.length) {
+    target.innerHTML = `<tr><td colspan="8">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
+  }
+}
+
 function renderAssetGroups(target: HTMLElement, rows: AssetGroupSummary[], locale: Locale): void {
   target.innerHTML = rows.map((row) => {
     const tone = row.pnl >= 0 ? "win" : "loss";
@@ -273,7 +311,7 @@ function renderHoldingPeriods(target: HTMLElement, rows: HoldingPeriodSummary[],
     return `
       <tr>
         <td>${escapeHtml(holdingBucketName(row.bucket, locale))}</td>
-        <td class="num">${formatDays(row.medianHoldingDays, locale)}</td>
+        <td class="num">${formatHoldingDuration(row.medianHoldingDays, locale)}</td>
         <td class="num ${tone}">${money(row.pnl)}</td>
         <td class="num">${ratio(row.profitFactor)}</td>
         <td class="num">${ratio(row.payoffRatio)}</td>
@@ -298,7 +336,7 @@ function renderDirectionSummaries(target: HTMLElement, rows: DirectionSummary[],
           <strong class="${tone}">${money(row.pnl)}</strong>
         </div>
         <dl>
-          <div><dt>${escapeHtml(t(locale, "medianHoldingDays"))}</dt><dd>${formatDays(row.medianHoldingDays, locale)}</dd></div>
+          <div><dt>${escapeHtml(t(locale, "medianHoldingDays"))}</dt><dd>${formatHoldingDuration(row.medianHoldingDays, locale)}</dd></div>
           <div><dt>${escapeHtml(t(locale, "pf"))}</dt><dd>${ratio(row.profitFactor)}</dd></div>
           <div><dt>${escapeHtml(t(locale, "payoffShort"))}</dt><dd>${ratio(row.payoffRatio)}</dd></div>
           <div><dt>${escapeHtml(t(locale, "winRate"))}</dt><dd>${percent(row.winRate)}</dd></div>
@@ -463,10 +501,55 @@ function localizeAssetClass(value: string, locale: Locale): string {
   return value || t(locale, "other");
 }
 
-function formatDays(value: number, locale: Locale): string {
+function intradayWeaknessCard(rows: IntradaySessionSummary[], locale: Locale): MetricCard {
+  const weakest = [...rows].sort((a, b) => a.average - b.average || a.medianPnl - b.medianPnl || a.pnl - b.pnl)[0];
+  if (!weakest) return { label: t(locale, "weakestSession"), value: "--", note: t(locale, "intradaySessionNoData") };
+
+  const tone = weakest.average >= 0 ? "win" : "loss";
+  return {
+    label: t(locale, "weakestSession"),
+    value: `${intradaySessionName(weakest.session, locale)} ${intradaySessionRange(weakest.session)}`,
+    valueHtml: `
+      <span class="metric-session-name">${escapeHtml(intradaySessionName(weakest.session, locale))}</span>
+      <span class="metric-session-range">${escapeHtml(intradaySessionRange(weakest.session))}</span>
+    `,
+    note: `${money(weakest.average)} ${t(locale, "expectancy")}`,
+    tone,
+    status: statusLabel(locale, weakest.average),
+  };
+}
+
+function formatHoldingDuration(value: number, locale: Locale): string {
   const days = Number.isFinite(value) ? value : 0;
-  const formatted = days < 10 ? days.toFixed(1) : days.toFixed(0);
+  if (days > 0 && days < 1) {
+    const totalMinutes = Math.max(1, Math.round(days * 24 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours && minutes) return `${hours}${t(locale, "hoursShort")} ${minutes}${t(locale, "minutesShort")}`;
+    if (hours) return `${hours}${t(locale, "hoursShort")}`;
+    return `${minutes}${t(locale, "minutesShort")}`;
+  }
+  const formatted = days < 10 ? days.toFixed(2) : days.toFixed(1);
   return `${formatted}${t(locale, "daysShort")}`;
+}
+
+function intradaySessionName(session: IntradaySession, locale: Locale): string {
+  if (session === "morning") return t(locale, "sessionMorning");
+  if (session === "midday") return t(locale, "sessionMidday");
+  return t(locale, "sessionLate");
+}
+
+function intradaySessionLabel(session: IntradaySession, locale: Locale): string {
+  return `
+    <span class="session-name">${escapeHtml(intradaySessionName(session, locale))}</span>
+    <span class="session-range">${escapeHtml(intradaySessionRange(session))}</span>
+  `;
+}
+
+function intradaySessionRange(session: IntradaySession): string {
+  if (session === "morning") return "09:30-11:30";
+  if (session === "midday") return "11:30-14:00";
+  return "14:00-16:15";
 }
 
 function holdingBucketName(bucket: HoldingBucket, locale: Locale): string {

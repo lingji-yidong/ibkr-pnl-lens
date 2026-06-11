@@ -94,6 +94,7 @@ export interface MetricSummary {
 
 export type PositionDirection = "long" | "short" | "neutral";
 export type HoldingBucket = "intraday" | "swing" | "position" | "long_term";
+export type IntradaySession = "morning" | "midday" | "late";
 
 export interface ClosedPositionSlice {
   symbol: string;
@@ -164,6 +165,21 @@ export interface PeriodPerformance {
   losses: number;
 }
 
+export interface IntradaySessionSummary {
+  session: IntradaySession;
+  pnl: number;
+  medianPnl: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+  winRate: number;
+  count: number;
+  wins: number;
+  losses: number;
+  average: number;
+}
+
 export interface SymbolSummary {
   symbol: string;
   assetClass: AssetClass;
@@ -215,6 +231,7 @@ export interface ParsedStatement {
   daily: DailyPnl[];
   weekly: PeriodPerformance[];
   monthly: PeriodPerformance[];
+  intradaySessions: IntradaySessionSummary[];
   symbols: SymbolSummary[];
   assetGroups: AssetGroupSummary[];
   optionUnderlyingDays: OptionUnderlyingDaySummary[];

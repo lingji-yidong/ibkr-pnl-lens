@@ -526,6 +526,24 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+.metric-card .metric-session-name {
+  display: inline;
+  color: inherit;
+  font-size: 1em;
+  font-weight: inherit;
+}
+
+.metric-card .metric-session-range {
+  display: inline-block;
+  margin-left: 7px;
+  color: var(--muted);
+  font-size: 0.48em;
+  font-weight: 760;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
 .metric-card small {
   display: block;
   margin-top: 7px;
@@ -594,6 +612,47 @@ canvas {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.session-review {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.session-review h3 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.session-review p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.table-wrap.session-table {
+  max-height: none;
+}
+
+.session-name,
+.session-range {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+.session-name {
+  margin-right: 6px;
+  font-weight: 760;
+}
+
+.session-range {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .segmented {
