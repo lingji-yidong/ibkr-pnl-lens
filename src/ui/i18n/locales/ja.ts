@@ -10,7 +10,7 @@ export const ja = {
   chooseFile: "ファイル選択",
   account: "口座",
   name: "氏名",
-  neutralName: "マスク済み",
+  neutralName: "モモ",
   period: "期間",
   baseCurrency: "基準通貨",
   closed: "決済",

@@ -10,7 +10,7 @@ export const zhHans = {
   chooseFile: "选择文件",
   account: "账户",
   name: "名称",
-  neutralName: "已脱敏",
+  neutralName: "momo",
   period: "期间",
   baseCurrency: "基础货币",
   closed: "平仓",

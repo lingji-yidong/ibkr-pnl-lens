@@ -10,7 +10,7 @@ export const ko = {
   chooseFile: "파일 선택",
   account: "계좌",
   name: "이름",
-  neutralName: "마스킹됨",
+  neutralName: "모모",
   period: "기간",
   baseCurrency: "기준 통화",
   closed: "청산",

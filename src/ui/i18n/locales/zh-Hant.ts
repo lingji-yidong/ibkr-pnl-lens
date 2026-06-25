@@ -10,7 +10,7 @@ export const zhHant = {
   chooseFile: "選擇文件",
   account: "帳戶",
   name: "名稱",
-  neutralName: "已脫敏",
+  neutralName: "momo",
   period: "期間",
   baseCurrency: "基礎貨幣",
   closed: "平倉",

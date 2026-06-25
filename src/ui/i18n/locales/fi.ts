@@ -10,7 +10,7 @@ export const fi = {
   chooseFile: "Valitse tiedosto",
   account: "Tili",
   name: "Nimi",
-  neutralName: "Peitetty",
+  neutralName: "momo",
   period: "Jakso",
   baseCurrency: "Perusvaluutta",
   closed: "suljettua",

@@ -10,7 +10,7 @@ export const ru = {
   chooseFile: "Выбрать файл",
   account: "Счет",
   name: "Имя",
-  neutralName: "Скрыто",
+  neutralName: "момо",
   period: "Период",
   baseCurrency: "Базовая валюта",
   closed: "закрыто",

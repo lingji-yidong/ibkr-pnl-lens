@@ -10,7 +10,7 @@ export const en = {
   chooseFile: "Choose file",
   account: "Account",
   name: "Name",
-  neutralName: "Redacted",
+  neutralName: "momo",
   period: "Period",
   baseCurrency: "Base currency",
   closed: "closed",

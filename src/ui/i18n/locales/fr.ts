@@ -10,7 +10,7 @@ export const fr = {
   chooseFile: "Choisir fichier",
   account: "Compte",
   name: "Nom",
-  neutralName: "Masqué",
+  neutralName: "momo",
   period: "Période",
   baseCurrency: "Devise de base",
   closed: "clôturées",

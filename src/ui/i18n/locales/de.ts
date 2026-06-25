@@ -10,7 +10,7 @@ export const de = {
   chooseFile: "Datei wählen",
   account: "Konto",
   name: "Name",
-  neutralName: "Maskiert",
+  neutralName: "mömö",
   period: "Zeitraum",
   baseCurrency: "Basiswährung",
   closed: "geschlossen",
