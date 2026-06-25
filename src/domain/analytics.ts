@@ -18,6 +18,7 @@ import type {
   PositionDirection,
   PeriodPerformance,
   SymbolSummary,
+  WeekdayPerformance,
 } from "./types.js";
 
 export function parseIbkrStatement(text: string, selectedAccountIndex = 0): ParsedStatement {
@@ -44,6 +45,7 @@ export function parseIbkrStatement(text: string, selectedAccountIndex = 0): Pars
     weekly: buildPeriodPerformance(closedTrades, weekLabel),
     monthly: buildPeriodPerformance(closedTrades, monthLabel),
     intradaySessions: buildIntradaySessions(closedTrades),
+    weekdays: buildWeekdayPerformance(closedTrades),
     symbols: buildSymbols(closedTrades),
     assetGroups: buildAssetGroups(closedTrades),
     optionUnderlyingDays: buildOptionUnderlyingDays(closedTrades),
@@ -443,6 +445,30 @@ function buildIntradaySessions(closedTrades: ClosedTrade[]): IntradaySessionSumm
       session,
       ...summarizeIntradayPnls(bySession.get(session) || []),
     }));
+}
+
+function buildWeekdayPerformance(closedTrades: ClosedTrade[]): WeekdayPerformance[] {
+  const byWeekday = new Map<number, number[]>();
+  for (const trade of closedTrades) {
+    if (!trade.day || trade.realizedPnl === 0) continue;
+    if (!intradaySession(trade.date)) continue;
+    const weekday = weekdayIndex(trade.day);
+    if (weekday === null || weekday === 0 || weekday === 6) continue;
+    byWeekday.set(weekday, [...(byWeekday.get(weekday) || []), trade.realizedPnl]);
+  }
+
+  return [1, 2, 3, 4, 5]
+    .filter((weekday) => byWeekday.has(weekday))
+    .map((weekday) => ({
+      weekday,
+      ...summarizePnls(byWeekday.get(weekday) || []),
+    }));
+}
+
+function weekdayIndex(day: string): number | null {
+  const date = new Date(`${day}T00:00:00Z`);
+  const weekday = date.getUTCDay();
+  return Number.isFinite(weekday) ? weekday : null;
 }
 
 function summarizeIntradayPnls(pnls: number[]): Omit<IntradaySessionSummary, "session"> {

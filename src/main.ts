@@ -127,6 +127,13 @@ function bindEvents(): void {
       return;
     }
 
+    const pagerPageButton = (event.target as Element).closest<HTMLButtonElement>(".pager-page[data-symbol-page]");
+    if (pagerPageButton) {
+      state.symbolPage = Math.max(1, Number(pagerPageButton.dataset.symbolPage) || 1);
+      renderCurrentReport();
+      return;
+    }
+
     const button = (event.target as Element).closest<HTMLButtonElement>(".sort-button");
     if (!button) return;
     const table = button.dataset.sortTable as SortTable | undefined;
@@ -243,6 +250,8 @@ function getElements(): AppElements {
     periodWeekly: getElement("periodWeekly"),
     periodMonthly: getElement("periodMonthly"),
     intradaySessionRows: getElement("intradaySessionRows"),
+    weekdayRows: getElement("weekdayRows"),
+    disciplineBanner: getElement("disciplineBanner"),
     disciplineList: getElement("disciplineList"),
     bestLoserList: getElement("bestLoserList"),
     periodRows: getElement("periodRows"),

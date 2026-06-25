@@ -1,268 +1,316 @@
 <!doctype html>
 <html lang="zh-Hant">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>IBKR 盈虧比計算器</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div id="fileModeNotice" class="file-mode-notice" hidden>
-      請用本地伺服器開啟此工具：執行 npm run dev 後前往 http://127.0.0.1:5173/。直接開 index.html 時上傳與主題切換不會啟動。
-    </div>
-    <main class="shell">
-      <section class="topbar">
-        <div>
-          <p class="eyebrow" data-i18n="eyebrow">IBKR Activity Statement</p>
-          <h1 data-i18n="title">盈虧比報表分析</h1>
-        </div>
-        <div class="settings-bar" aria-label="Settings">
-          <label class="language-control" title="Language">
-            <span class="settings-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0c2.1-2.4 3.2-5.4 3.2-9S14.1 5.4 12 3m0 18c-2.1-2.4-3.2-5.4-3.2-9S9.9 5.4 12 3M3.6 9h16.8M3.6 15h16.8"/></svg>
-            </span>
-            <select id="localeSelect"></select>
-          </label>
-          <button id="themeToggle" class="icon-action" type="button" aria-pressed="false" aria-label="Theme"></button>
-        </div>
-      </section>
 
-      <section class="upload-panel" id="dropZone">
-        <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" />
-        <div class="upload-copy">
-          <span class="upload-mark" data-i18n="uploadMark">Flex XML</span>
-          <h2 data-i18n="uploadTitle">拖入或選擇 IBKR XML</h2>
-          <p data-i18n="uploadBody">名稱、帳戶、地址會在畫面與本地分析中脫敏。</p>
-          <p class="nfa-note" data-i18n="nfaDisclaimer">僅供學習與交易復盤，不構成投資建議。</p>
-        </div>
-        <label class="primary-action" for="fileInput" data-i18n="chooseFile">選擇文件</label>
-      </section>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IBKR 盈虧比計算器</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
 
-      <section class="privacy-strip" id="privacyStrip" hidden>
-        <div>
-          <span class="label" data-i18n="account">帳戶</span>
-          <strong id="maskedAccount">--</strong>
-          <select id="accountSelect" class="account-select" hidden></select>
-        </div>
-        <div>
-          <span class="label" data-i18n="name">名稱</span>
-          <strong id="maskedName">--</strong>
-        </div>
-        <div>
-          <span class="label" data-i18n="period">期間</span>
-          <strong id="period">--</strong>
-        </div>
-        <div>
-          <span class="label" data-i18n="baseCurrency">基礎貨幣</span>
-          <strong id="baseCurrency">--</strong>
-        </div>
-      </section>
+<body>
+  <div id="fileModeNotice" class="file-mode-notice" hidden>
+    請用本地伺服器開啟此工具：執行 npm run dev 後前往 http://127.0.0.1:5173/。直接開 index.html 時上傳與主題切換不會啟動。
+  </div>
+  <main class="shell">
+    <section class="topbar">
+      <div>
+        <p class="eyebrow" data-i18n="eyebrow">IBKR Activity Statement</p>
+        <h1 data-i18n="title">盈虧比報表分析</h1>
+      </div>
+      <div class="settings-bar" aria-label="Settings">
+        <label class="language-control" title="Language">
+          <span class="settings-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path
+                d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0c2.1-2.4 3.2-5.4 3.2-9S14.1 5.4 12 3m0 18c-2.1-2.4-3.2-5.4-3.2-9S9.9 5.4 12 3M3.6 9h16.8M3.6 15h16.8" />
+            </svg>
+          </span>
+          <select id="localeSelect"></select>
+        </label>
+        <button id="themeToggle" class="icon-action" type="button" aria-pressed="false" aria-label="Theme"></button>
+      </div>
+    </section>
 
-      <section class="metrics-grid" id="metricsGrid" hidden></section>
+    <section class="upload-panel" id="dropZone">
+      <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" />
+      <div class="upload-copy">
+        <span class="upload-mark" data-i18n="uploadMark">Flex XML</span>
+        <h2 data-i18n="uploadTitle">拖入或選擇 IBKR XML</h2>
+        <p data-i18n="uploadBody">名稱、帳戶、地址會在畫面與本地分析中脫敏。</p>
+        <p class="nfa-note" data-i18n="nfaDisclaimer">僅供學習與交易復盤，不構成投資建議。</p>
+      </div>
+      <label class="primary-action" for="fileInput" data-i18n="chooseFile">選擇文件</label>
+    </section>
 
-      <section class="workspace" id="workspace" hidden>
-        <article class="panel wide">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="equityCurve">Equity Curve</p>
-              <h2 data-i18n="dailyRealized">每日已實現損益</h2>
-            </div>
-            <span id="tradeCount" class="pill">0 平倉 / 0 成交</span>
+    <section class="privacy-strip" id="privacyStrip" hidden>
+      <div>
+        <span class="label" data-i18n="account">帳戶</span>
+        <strong id="maskedAccount">--</strong>
+        <select id="accountSelect" class="account-select" hidden></select>
+      </div>
+      <div>
+        <span class="label" data-i18n="name">名稱</span>
+        <strong id="maskedName">--</strong>
+      </div>
+      <div>
+        <span class="label" data-i18n="period">期間</span>
+        <strong id="period">--</strong>
+      </div>
+      <div>
+        <span class="label" data-i18n="baseCurrency">基礎貨幣</span>
+        <strong id="baseCurrency">--</strong>
+      </div>
+    </section>
+
+    <section class="metrics-grid" id="metricsGrid" hidden></section>
+
+    <section class="workspace" id="workspace" hidden>
+      <article class="panel wide">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="equityCurve">Equity Curve</p>
+            <h2 data-i18n="dailyRealized">每日已實現損益</h2>
           </div>
-          <canvas id="dailyChart" height="280"></canvas>
-        </article>
+          <span id="tradeCount" class="pill">0 平倉 / 0 成交</span>
+        </div>
+        <canvas id="dailyChart" height="280"></canvas>
+      </article>
 
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="payoff">Payoff</p>
-              <h2 data-i18n="winLossDistribution">贏虧分布</h2>
-            </div>
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="payoff">Payoff</p>
+            <h2 data-i18n="winLossDistribution">贏虧分布</h2>
           </div>
-          <canvas id="distributionChart" height="280"></canvas>
-        </article>
+        </div>
+        <canvas id="distributionChart" height="280"></canvas>
+      </article>
 
-        <article class="panel wide">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="periodPerformance">Period</p>
-              <h2 id="periodTitle">週度盈虧比成績</h2>
-              <p class="panel-note" data-i18n="periodHint">綠柱為盈利，紅柱為虧損；PF 與盈虧比請看下方表格。</p>
-            </div>
-            <div class="segmented" role="group" aria-label="Period range">
-              <button id="periodWeekly" type="button" class="active" data-period="weekly" data-i18n="weekly">週度</button>
-              <button id="periodMonthly" type="button" data-period="monthly" data-i18n="monthly">月度</button>
-            </div>
+      <article class="panel wide">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="periodPerformance">Period</p>
+            <h2 id="periodTitle">週度盈虧比成績</h2>
+            <p class="panel-note" data-i18n="periodHint">綠柱為盈利，紅柱為虧損；PF 與盈虧比請看下方表格。</p>
           </div>
-          <canvas id="periodChart" class="chart-canvas" height="260"></canvas>
-          <div class="table-wrap compact period-table">
+          <div class="segmented" role="group" aria-label="Period range">
+            <button id="periodWeekly" type="button" class="active" data-period="weekly" data-i18n="weekly">週度</button>
+            <button id="periodMonthly" type="button" data-period="monthly" data-i18n="monthly">月度</button>
+          </div>
+        </div>
+        <canvas id="periodChart" class="chart-canvas" height="260"></canvas>
+        <div class="table-wrap compact period-table">
+          <table>
+            <thead>
+              <tr>
+                <th id="periodColumnLabel" data-i18n="periodColumn">週期</th>
+                <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="pnl"
+                    data-i18n="realized">已實現</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="profitFactor"
+                    data-i18n="pf">PF</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="payoffRatio"
+                    data-i18n="payoffShort">盈虧比</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="winRate"
+                    data-i18n="winRate">勝率</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="count"
+                    data-i18n="trades">筆數</button></th>
+              </tr>
+            </thead>
+            <tbody id="periodRows"></tbody>
+          </table>
+        </div>
+        <div class="session-review">
+          <div class="session-review-head">
+            <h3 data-i18n="intradaySessionTitle">早午尾盤勝率分析</h3>
+            <p data-i18n="intradaySessionHint">按平倉時間比較早盤、午盤、尾盤的已實現、中位數、平均每筆、PF、盈虧比與勝率。</p>
+          </div>
+          <div class="table-wrap compact session-table">
             <table>
               <thead>
                 <tr>
-                  <th id="periodColumnLabel" data-i18n="periodColumn">週期</th>
-                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="profitFactor" data-i18n="pf">PF</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="payoffRatio" data-i18n="payoffShort">盈虧比</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="period" data-sort-key="count" data-i18n="trades">筆數</button></th>
-                </tr>
-              </thead>
-              <tbody id="periodRows"></tbody>
-            </table>
-          </div>
-          <div class="session-review">
-            <div class="session-review-head">
-              <h3 data-i18n="intradaySessionTitle">早午尾盤勝率分析</h3>
-              <p data-i18n="intradaySessionHint">按平倉時間比較早盤、午盤、尾盤的已實現、中位數、平均每筆、PF、盈虧比與勝率。</p>
-            </div>
-            <div class="table-wrap compact session-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th data-i18n="session">時段</th>
-                    <th data-i18n="realized">已實現</th>
-                    <th data-i18n="medianPnl">中位數</th>
-                    <th data-i18n="expectancy">期望值</th>
-                    <th data-i18n="pf">PF</th>
-                    <th data-i18n="payoffShort">盈虧比</th>
-                    <th data-i18n="winRate">勝率</th>
-                    <th data-i18n="trades">筆數</th>
-                  </tr>
-                </thead>
-                <tbody id="intradaySessionRows"></tbody>
-              </table>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel asset-panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="assetBreakdown">Assets</p>
-              <h2 data-i18n="assetBreakdownTitle">股票 / 期權統計</h2>
-            </div>
-          </div>
-          <div id="assetRows" class="asset-compare"></div>
-        </article>
-
-        <article class="panel holding-panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="holdingReview">Holding</p>
-              <h2 data-i18n="holdingReviewTitle">交易持倉與盈虧比分析</h2>
-              <p class="panel-note" data-i18n="holdingReviewHint">按開平倉匹配後比較不同持倉週期的 PF、盈虧比與勝率。</p>
-            </div>
-          </div>
-          <div class="table-wrap compact holding-table">
-            <table>
-              <thead>
-                <tr>
-                  <th data-i18n="holdingPeriod">持倉週期</th>
-                  <th data-i18n="medianHoldingDays">持倉中位數</th>
+                  <th data-i18n="session">時段</th>
                   <th data-i18n="realized">已實現</th>
+                  <th data-i18n="medianPnl">中位數</th>
+                  <th data-i18n="expectancy">期望值</th>
                   <th data-i18n="pf">PF</th>
                   <th data-i18n="payoffShort">盈虧比</th>
                   <th data-i18n="winRate">勝率</th>
                   <th data-i18n="trades">筆數</th>
                 </tr>
               </thead>
-              <tbody id="holdingRows"></tbody>
+              <tbody id="intradaySessionRows"></tbody>
             </table>
           </div>
-        </article>
-
-        <article class="panel direction-panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="directionReview">Direction</p>
-              <h2 data-i18n="directionReviewTitle">多空倉位分析</h2>
-              <p class="panel-note" data-i18n="directionReviewHint">按開倉方向拆分多頭與空頭，檢查哪一側更有優勢。</p>
-            </div>
+        </div>
+        <div class="session-review">
+          <div class="session-review-head">
+            <h3 data-i18n="weekdayReviewTitle">星期幾交易表現</h3>
+            <p data-i18n="weekdayReviewHint">按平倉日比較一週內哪天平均每筆最好、哪天最差。</p>
           </div>
-          <div id="directionRows" class="direction-compare"></div>
-        </article>
-
-        <article class="panel option-panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="optionReview">Options</p>
-              <h2 data-i18n="optionReviewTitle">期權標的復盤</h2>
-            </div>
-          </div>
-          <div class="table-wrap compact tall option-trades">
+          <div class="table-wrap compact weekday-table">
             <table>
               <thead>
                 <tr>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="underlying" data-i18n="underlying">標的</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="lastDate" data-i18n="date">日期</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="profitFactor" data-i18n="pf">PF</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="autoExpiryCount" data-i18n="autoExpiry">自動到期</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="count" data-i18n="trades">筆數</button></th>
+                  <th data-i18n="weekday">星期</th>
+                  <th class="rank-heading" aria-label="Rank"></th>
+                  <th data-i18n="realized">已實現</th>
+                  <th data-i18n="average">平均</th>
+                  <th data-i18n="pf">PF</th>
+                  <th data-i18n="payoffShort">盈虧比</th>
+                  <th data-i18n="winRate">勝率</th>
+                  <th data-i18n="trades">筆數</th>
                 </tr>
               </thead>
-              <tbody id="optionRows"></tbody>
+              <tbody id="weekdayRows"></tbody>
             </table>
           </div>
-        </article>
+        </div>
+      </article>
 
-        <article class="panel leaderboard-panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="symbols">Symbols</p>
-              <h2 data-i18n="symbolPerformance">標的排行榜</h2>
-            </div>
+      <article class="panel asset-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="assetBreakdown">Assets</p>
+            <h2 data-i18n="assetBreakdownTitle">股票 / 期權統計</h2>
           </div>
-          <div class="table-wrap compact tall leaderboard-table">
-            <table>
-              <thead>
-                <tr>
-                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="symbol" data-i18n="underlying">標的</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="assetClass" data-i18n="asset">資產</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="pnl" data-i18n="realized">已實現</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="count" data-i18n="trades">交易數</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="winRate" data-i18n="winRate">勝率</button></th>
-                  <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="average" data-i18n="average">平均盈虧</button></th>
-                </tr>
-              </thead>
-              <tbody id="symbolRows"></tbody>
-            </table>
-          </div>
-          <div id="symbolPager" class="pager" aria-label="Symbol leaderboard pages"></div>
-        </article>
+        </div>
+        <div id="assetRows" class="asset-compare"></div>
+      </article>
 
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="discipline">Discipline</p>
-              <h2 data-i18n="disciplineRisk">紀律風險</h2>
-            </div>
+      <article class="panel holding-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="holdingReview">Holding</p>
+            <h2 data-i18n="holdingReviewTitle">交易持倉與盈虧比分析</h2>
+            <p class="panel-note" data-i18n="holdingReviewHint">按開平倉匹配後比較不同持倉週期的 PF、盈虧比與勝率。</p>
           </div>
-          <div id="disciplineList" class="insight-list"></div>
-          <div class="philosophy-block">
-            <p class="eyebrow" data-i18n="bestLoserWins">Best Loser Wins</p>
-            <div id="bestLoserList" class="insight-list"></div>
-          </div>
-        </article>
+        </div>
+        <div class="table-wrap compact holding-table">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="holdingPeriod">持倉週期</th>
+                <th data-i18n="medianHoldingDays">持倉中位數</th>
+                <th data-i18n="realized">已實現</th>
+                <th data-i18n="pf">PF</th>
+                <th data-i18n="payoffShort">盈虧比</th>
+                <th data-i18n="winRate">勝率</th>
+                <th data-i18n="trades">筆數</th>
+              </tr>
+            </thead>
+            <tbody id="holdingRows"></tbody>
+          </table>
+        </div>
+      </article>
 
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow" data-i18n="offlineCoach">Offline Coach</p>
-              <h2 data-i18n="offlineAdvice">離線建議</h2>
-            </div>
+      <article class="panel direction-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="directionReview">Direction</p>
+            <h2 data-i18n="directionReviewTitle">多空倉位分析</h2>
+            <p class="panel-note" data-i18n="directionReviewHint">按開倉方向拆分多頭與空頭，檢查哪一側更有優勢。</p>
           </div>
-          <div id="offlineAdvice" class="insight-list"></div>
-        </article>
-      </section>
-    </main>
+        </div>
+        <div id="directionRows" class="direction-compare"></div>
+      </article>
 
-    <script type="module" src="/src/main.ts"></script>
-    <script>
-      if (location.protocol === "file:") {
-        document.getElementById("fileModeNotice")?.removeAttribute("hidden");
-      }
-    </script>
-  </body>
+      <article class="panel option-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="optionReview">Options</p>
+            <h2 data-i18n="optionReviewTitle">期權標的復盤</h2>
+          </div>
+        </div>
+        <div class="table-wrap compact tall option-trades">
+          <table>
+            <thead>
+              <tr>
+                <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="underlying"
+                    data-i18n="underlying">標的</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="lastDate"
+                    data-i18n="date">日期</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="pnl"
+                    data-i18n="realized">已實現</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="profitFactor"
+                    data-i18n="pf">PF</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="winRate"
+                    data-i18n="winRate">勝率</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="autoExpiryCount"
+                    data-i18n="autoExpiry">自動到期</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="option" data-sort-key="count"
+                    data-i18n="trades">筆數</button></th>
+              </tr>
+            </thead>
+            <tbody id="optionRows"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel leaderboard-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="symbols">Symbols</p>
+            <h2 data-i18n="symbolPerformance">標的排行榜</h2>
+          </div>
+        </div>
+        <div class="table-wrap compact tall leaderboard-table">
+          <table>
+            <thead>
+              <tr>
+                <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="symbol"
+                    data-i18n="underlying">標的</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="assetClass"
+                    data-i18n="asset">資產</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="pnl"
+                    data-i18n="realized">已實現</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="count"
+                    data-i18n="trades">交易數</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="winRate"
+                    data-i18n="winRate">勝率</button></th>
+                <th><button class="sort-button" type="button" data-sort-table="symbol" data-sort-key="average"
+                    data-i18n="average">平均盈虧</button></th>
+              </tr>
+            </thead>
+            <tbody id="symbolRows"></tbody>
+          </table>
+        </div>
+        <div id="symbolPager" class="pager" aria-label="Symbol leaderboard pages"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="discipline">Discipline</p>
+            <h2 data-i18n="disciplineRisk">紀律風險</h2>
+          </div>
+        </div>
+        <div id="disciplineBanner" class="discipline-banner" hidden></div>
+        <div id="disciplineList" class="insight-list"></div>
+        <div class="philosophy-block">
+          <p class="eyebrow" data-i18n="bestLoserWins">Best Loser Wins</p>
+          <div id="bestLoserList" class="insight-list"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow" data-i18n="offlineCoach">Offline Coach</p>
+            <h2 data-i18n="offlineAdvice">離線建議</h2>
+          </div>
+        </div>
+        <div id="offlineAdvice" class="insight-list"></div>
+      </article>
+    </section>
+  </main>
+
+  <script type="module" src="/src/main.ts"></script>
+  <script>
+    if (location.protocol === "file:") {
+      document.getElementById("fileModeNotice") ? .removeAttribute("hidden");
+    }
+  </script>
+</body>
+
 </html>

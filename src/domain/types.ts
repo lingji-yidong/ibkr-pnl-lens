@@ -180,6 +180,20 @@ export interface IntradaySessionSummary {
   average: number;
 }
 
+export interface WeekdayPerformance {
+  weekday: number;
+  pnl: number;
+  grossProfit: number;
+  grossLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+  winRate: number;
+  count: number;
+  wins: number;
+  losses: number;
+  average: number;
+}
+
 export interface SymbolSummary {
   symbol: string;
   assetClass: AssetClass;
@@ -232,6 +246,7 @@ export interface ParsedStatement {
   weekly: PeriodPerformance[];
   monthly: PeriodPerformance[];
   intradaySessions: IntradaySessionSummary[];
+  weekdays: WeekdayPerformance[];
   symbols: SymbolSummary[];
   assetGroups: AssetGroupSummary[];
   optionUnderlyingDays: OptionUnderlyingDaySummary[];

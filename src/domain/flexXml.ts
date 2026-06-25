@@ -85,6 +85,7 @@ function statementSummary(statement: StatementBlock): StatementAccountSummary {
 function normalizeFlexTrade(row: Record<string, string>): FlexTrade {
   const rawDate = row.dateTime || row.tradeDate || "";
   const date = parseFlexDate(rawDate);
+  const tradeDay = formatFlexDay(row.tradeDate);
   const notes = splitCodes(row.notes);
   const openCloseIndicator = row.openCloseIndicator || "";
   const actionCodes = [openCloseIndicator, ...notes].filter(Boolean);
@@ -99,7 +100,7 @@ function normalizeFlexTrade(row: Record<string, string>): FlexTrade {
     underlyingSymbol: row.underlyingSymbol || "",
     description: row.description || "",
     date,
-    day: date ? date.toISOString().slice(0, 10) : formatFlexDay(row.tradeDate),
+    day: tradeDay || formatLocalDate(date),
     quantity: num(row.quantity),
     tradePrice: num(row.tradePrice),
     proceeds: num(row.proceeds),
@@ -264,6 +265,14 @@ function parseFlexDate(value: string): Date | null {
 function formatFlexDay(value = ""): string {
   if (!/^\d{8}$/.test(value)) return "";
   return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+}
+
+function formatLocalDate(date: Date | null): string {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatFlexPeriod(fromDate = "", toDate = ""): string {

@@ -30,6 +30,19 @@ const symbolLeaderboardTitles = {
   fi: "Symbolien ranking",
 };
 
+const weekdayReviewTitles = {
+  "zh-Hant": "星期幾交易表現",
+  "zh-Hans": "星期几交易表现",
+  en: "Weekday trading performance",
+  ja: "曜日別の取引成績",
+  ko: "요일별 거래 성과",
+  es: "Rendimiento por día de la semana",
+  de: "Performance nach Wochentag",
+  fr: "Performance par jour de semaine",
+  ru: "Результаты по дням недели",
+  fi: "Kaupankäynnin tulos viikonpäivittäin",
+};
+
 for (const { code } of localeOptions) {
   const table = translations[code];
   assert.equal(Object.keys(table).length, translationKeys.length, `${code} should expose every translation key`);
@@ -43,6 +56,7 @@ for (const { code } of localeOptions) {
   assert.notEqual(t(code, "neutralName"), "Name", `${code}.neutralName must stay anonymized`);
   assert.equal(t(code, "optionReviewTitle"), optionReviewTitles[code], `${code}.optionReviewTitle should match aggregate design`);
   assert.equal(t(code, "symbolPerformance"), symbolLeaderboardTitles[code], `${code}.symbolPerformance should match leaderboard design`);
+  assert.equal(t(code, "weekdayReviewTitle"), weekdayReviewTitles[code], `${code}.weekdayReviewTitle should be localized`);
 }
 
 assert.deepEqual([...adviceSignalIds].sort(), [...emittedAdviceSignalIds].sort(), "i18n advice registry must match emitted advice signals");
@@ -89,6 +103,12 @@ assert.equal(
   false,
   "zh-Hans locale must not contain common Traditional Chinese residue",
 );
+
+for (const { code } of localeOptions.filter((option) => option.code !== "en")) {
+  const source = readFileSync(join(process.cwd(), `src/ui/i18n/locales/${code}.ts`), "utf8");
+  assert.equal(source.includes('from "./en.js"'), false, `${code} locale must not import English fallback`);
+  assert.equal(/\.\.\.en/.test(source), false, `${code} locale must not spread English fallback`);
+}
 
 console.log(
   JSON.stringify(

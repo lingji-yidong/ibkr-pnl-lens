@@ -110,6 +110,16 @@ const xmlWithIndependentSameDayOptions = `
 </FlexStatement>
 `;
 
+const xmlWithWeekendAndPremarketCloses = `
+<FlexStatement accountId="DEMO-WEEKDAY" fromDate="20260104" toDate="20260106">
+  <Trades>
+    <Trade assetCategory="STK" currency="USD" symbol="SUN" description="SUN" underlyingSymbol="SUN" dateTime="20260104;100000" tradeDate="20260104" quantity="1" tradePrice="10" proceeds="10" ibCommission="0" cost="0" fifoPnlRealized="40" mtmPnl="40" openCloseIndicator="C" transactionType="Sell" />
+    <Trade assetCategory="STK" currency="USD" symbol="PRE" description="PRE" underlyingSymbol="PRE" dateTime="20260105;080000" tradeDate="20260105" quantity="1" tradePrice="10" proceeds="10" ibCommission="0" cost="0" fifoPnlRealized="-30" mtmPnl="-30" openCloseIndicator="C" transactionType="Sell" />
+    <Trade assetCategory="STK" currency="USD" symbol="REG" description="REG" underlyingSymbol="REG" dateTime="20260105;100000" tradeDate="20260105" quantity="1" tradePrice="10" proceeds="10" ibCommission="0" cost="0" fifoPnlRealized="25" mtmPnl="25" openCloseIndicator="C" transactionType="Sell" />
+  </Trades>
+</FlexStatement>
+`;
+
 const report = parseIbkrStatement(xml);
 const multiAccountReport = parseIbkrStatement(multiAccountXml);
 const secondAccountReport = parseIbkrStatement(multiAccountXml, 1);
@@ -120,6 +130,7 @@ const boughtPutExposureReport = parseIbkrStatement(xmlWithBoughtPutExposure);
 const bullPutSpreadReport = parseIbkrStatement(xmlWithBullPutSpread);
 const ironCondorReport = parseIbkrStatement(xmlWithIronCondor);
 const independentSameDayOptionsReport = parseIbkrStatement(xmlWithIndependentSameDayOptions);
+const weekendAndPremarketClosesReport = parseIbkrStatement(xmlWithWeekendAndPremarketCloses);
 
 // Basic parsing
 assert.ok(report.profile.maskedAccountId.includes("*"));
@@ -176,6 +187,11 @@ assert.deepEqual(report.intradaySessions.map((row) => row.session), ["morning", 
 assert.equal(report.intradaySessions.find((row) => row.session === "midday")?.count, 1);
 assert.equal(round2(report.intradaySessions.find((row) => row.session === "midday")?.average || 0), -110);
 assert.equal(round2(report.intradaySessions.find((row) => row.session === "midday")?.medianPnl || 0), -110);
+assert.ok(report.weekdays.length > 0);
+assert.ok(report.weekdays.every((row) => row.count === row.wins + row.losses));
+assert.deepEqual(weekendAndPremarketClosesReport.weekdays.map((row) => row.weekday), [1]);
+assert.equal(weekendAndPremarketClosesReport.weekdays[0]?.count, 1);
+assert.equal(weekendAndPremarketClosesReport.weekdays[0]?.pnl, 25);
 
 // Weekly/monthly PnL should reconcile with total net PnL
 assert.equal(
@@ -185,6 +201,11 @@ assert.equal(
 
 assert.equal(
   round2(report.monthly.reduce((total, row) => total + row.pnl, 0)),
+  round2(report.metrics.net),
+);
+
+assert.equal(
+  round2(report.weekdays.reduce((total, row) => total + row.pnl, 0)),
   round2(report.metrics.net),
 );
 
@@ -236,6 +257,7 @@ console.log(
       autoExpiry: report.metrics.autoExpiryCount,
       weeks: report.weekly.length,
       months: report.monthly.length,
+      weekdays: report.weekdays.length,
       assetGroups: report.assetGroups.map((row) => row.group),
       optionDays: report.optionUnderlyingDays.length,
     },

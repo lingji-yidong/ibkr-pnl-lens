@@ -1,7 +1,25 @@
 import { escapeHtml, money, percent, ratio } from "../domain/format.js";
-import type { AssetGroup, AssetGroupSummary, ClosedTrade, DirectionSummary, HoldingBucket, HoldingPeriodSummary, IntradaySession, IntradaySessionSummary, ParsedStatement, PeriodPerformance, PositionDirection, SymbolSummary } from "../domain/types.js";
+import type {
+  AssetGroup,
+  AssetGroupSummary,
+  ClosedTrade,
+  DirectionSummary,
+  HoldingBucket,
+  HoldingPeriodSummary,
+  IntradaySession,
+  IntradaySessionSummary,
+  ParsedStatement,
+  PeriodPerformance,
+  PositionDirection,
+  SymbolSummary,
+  WeekdayPerformance,
+} from "../domain/types.js";
 import { buildAdviceSignals } from "./advice.js";
-import { drawDailyChart, drawDistributionChart, drawPeriodPerformanceChart } from "./chart.js";
+import {
+  drawDailyChart,
+  drawDistributionChart,
+  drawPeriodPerformanceChart,
+} from "./chart.js";
 import type { Locale, TranslationKey } from "./i18n/index.js";
 import { formatMessage, renderAdvice, t } from "./i18n/index.js";
 
@@ -47,6 +65,8 @@ export interface AppElements {
   periodWeekly: HTMLButtonElement;
   periodMonthly: HTMLButtonElement;
   intradaySessionRows: HTMLElement;
+  weekdayRows: HTMLElement;
+  disciplineBanner: HTMLElement;
   disciplineList: HTMLElement;
   bestLoserList: HTMLElement;
   periodRows: HTMLElement;
@@ -59,7 +79,11 @@ export interface AppElements {
   offlineAdvice: HTMLElement;
 }
 
-export function renderReport(els: AppElements, report: ParsedStatement, options: RenderOptions): void {
+export function renderReport(
+  els: AppElements,
+  report: ParsedStatement,
+  options: RenderOptions,
+): void {
   const { profile, metrics } = report;
   els.privacyStrip.hidden = false;
   els.metricsGrid.hidden = false;
@@ -70,40 +94,117 @@ export function renderReport(els: AppElements, report: ParsedStatement, options:
   els.maskedName.textContent = t(options.locale, "neutralName");
   els.period.textContent = profile.period || "--";
   els.baseCurrency.textContent = profile.baseCurrency || "USD";
-  els.tradeCount.textContent = formatMessage(options.locale, "tradeCountSummary", {
-    closed: metrics.closedCount,
-    executions: metrics.executionCount,
-  });
+  els.tradeCount.textContent = formatMessage(
+    options.locale,
+    "tradeCountSummary",
+    {
+      closed: metrics.closedCount,
+      executions: metrics.executionCount,
+    },
+  );
 
   els.metricsGrid.innerHTML = metricCards([
-    [t(options.locale, "netRealized"), money(metrics.net), t(options.locale, "closedTradeSum"), pnlTone(metrics.net), statusLabel(options.locale, metrics.net)],
-    [t(options.locale, "profitFactor"), ratio(metrics.profitFactor), t(options.locale, "grossProfitLoss"), thresholdTone(metrics.profitFactor), thresholdStatusLabel(options.locale, metrics.profitFactor)],
-    [t(options.locale, "winRate"), percent(metrics.winRate), `${metrics.winCount} / ${metrics.lossCount}`],
-    [t(options.locale, "payoffRatio"), ratio(metrics.payoffRatio), t(options.locale, "averageWinLoss"), thresholdTone(metrics.payoffRatio), thresholdStatusLabel(options.locale, metrics.payoffRatio)],
-    [t(options.locale, "expectancy"), money(metrics.expectancy), t(options.locale, "perClosedTrade"), pnlTone(metrics.expectancy), statusLabel(options.locale, metrics.expectancy)],
+    [
+      t(options.locale, "netRealized"),
+      money(metrics.net),
+      t(options.locale, "closedTradeSum"),
+      pnlTone(metrics.net),
+      statusLabel(options.locale, metrics.net),
+    ],
+    [
+      t(options.locale, "profitFactor"),
+      ratio(metrics.profitFactor),
+      t(options.locale, "grossProfitLoss"),
+      thresholdTone(metrics.profitFactor),
+      thresholdStatusLabel(options.locale, metrics.profitFactor),
+    ],
+    [
+      t(options.locale, "winRate"),
+      percent(metrics.winRate),
+      `${metrics.winCount} / ${metrics.lossCount}`,
+    ],
+    [
+      t(options.locale, "payoffRatio"),
+      ratio(metrics.payoffRatio),
+      t(options.locale, "averageWinLoss"),
+      thresholdTone(metrics.payoffRatio),
+      thresholdStatusLabel(options.locale, metrics.payoffRatio),
+    ],
+    [
+      t(options.locale, "expectancy"),
+      money(metrics.expectancy),
+      t(options.locale, "perClosedTrade"),
+      pnlTone(metrics.expectancy),
+      statusLabel(options.locale, metrics.expectancy),
+    ],
     intradayWeaknessCard(report.intradaySessions, options.locale),
-    [t(options.locale, "medianHoldingDays"), formatHoldingDuration(metrics.medianHoldingDays, options.locale), formatMessage(options.locale, "holdingSampleSummary", { count: metrics.holdingSampleCount })],
-    [t(options.locale, "commissionDrag"), money(metrics.commissions), `${metrics.executionCount} ${t(options.locale, "executions")}`, "loss", t(options.locale, "costStatus")],
+    [
+      t(options.locale, "medianHoldingDays"),
+      formatHoldingDuration(metrics.medianHoldingDays, options.locale),
+      formatMessage(options.locale, "holdingSampleSummary", {
+        count: metrics.holdingSampleCount,
+      }),
+    ],
+    [
+      t(options.locale, "commissionDrag"),
+      money(metrics.commissions),
+      `${metrics.executionCount} ${t(options.locale, "executions")}`,
+      "loss",
+      t(options.locale, "costStatus"),
+    ],
   ]);
 
   const chartOptions = { locale: options.locale, theme: cssChartTheme() };
   drawDailyChart(els.dailyChart, report.daily, chartOptions);
-  drawDistributionChart(els.distributionChart, report.closedTrades, chartOptions);
+  drawDistributionChart(
+    els.distributionChart,
+    report.closedTrades,
+    chartOptions,
+  );
   renderPeriodSection(els, report, options);
 
   const advice = buildAdviceSignals(report);
-  renderInsights(els.disciplineList, advice.discipline.map((signal) => renderAdvice(options.locale, signal)));
-  renderInsights(els.bestLoserList, advice.bestLoserWins.map((signal) => renderAdvice(options.locale, signal)));
-  renderInsights(els.offlineAdvice, advice.offlineAdvice.map((signal) => renderAdvice(options.locale, signal)));
+  renderInsights(
+    els.disciplineList,
+    advice.discipline.map((signal) => renderAdvice(options.locale, signal)),
+  );
+  renderDisciplineBanner(els.disciplineBanner, report, options.locale);
+  renderInsights(
+    els.bestLoserList,
+    advice.bestLoserWins.map((signal) => renderAdvice(options.locale, signal)),
+  );
+  renderInsights(
+    els.offlineAdvice,
+    advice.offlineAdvice.map((signal) => renderAdvice(options.locale, signal)),
+  );
   renderHoldingPeriods(els.holdingRows, report.holdingPeriods, options.locale);
-  renderDirectionSummaries(els.directionRows, report.directionSummaries, options.locale);
+  renderDirectionSummaries(
+    els.directionRows,
+    report.directionSummaries,
+    options.locale,
+  );
   renderAssetGroups(els.assetRows, report.assetGroups, options.locale);
-  renderOptionRows(els.optionRows, report.optionTrades, options.locale, options.sorts.option);
-  renderSymbols(els.symbolRows, els.symbolPager, sortRows(report.symbols, options.sorts.symbol), options.locale, options.symbolPage);
+  renderOptionRows(
+    els.optionRows,
+    report.optionTrades,
+    options.locale,
+    options.sorts.option,
+  );
+  renderSymbols(
+    els.symbolRows,
+    els.symbolPager,
+    sortRows(report.symbols, options.sorts.symbol),
+    options.locale,
+    options.symbolPage,
+  );
   updateSortButtons(options.sorts);
 }
 
-function renderAccountPicker(els: AppElements, report: ParsedStatement, locale: Locale): void {
+function renderAccountPicker(
+  els: AppElements,
+  report: ParsedStatement,
+  locale: Locale,
+): void {
   const hasMultipleAccounts = report.accounts.length > 1;
   els.maskedAccount.hidden = hasMultipleAccounts;
   els.accountSelect.hidden = !hasMultipleAccounts;
@@ -111,7 +212,8 @@ function renderAccountPicker(els: AppElements, report: ParsedStatement, locale: 
 
   els.accountSelect.innerHTML = report.accounts
     .map((account) => {
-      const selected = account.index === report.selectedAccountIndex ? " selected" : "";
+      const selected =
+        account.index === report.selectedAccountIndex ? " selected" : "";
       const label = formatMessage(locale, "accountOptionLabel", {
         account: account.maskedAccountId || "--",
         trades: account.tradeCount,
@@ -121,20 +223,50 @@ function renderAccountPicker(els: AppElements, report: ParsedStatement, locale: 
     .join("");
 }
 
-export function renderPeriodSection(els: AppElements, report: ParsedStatement, options: RenderOptions): void {
-  const periods = options.periodMode === "weekly" ? report.weekly : report.monthly;
-  els.periodTitle.textContent = formatMessage(options.locale, "periodTitle", { period: options.periodMode });
-  els.periodColumnLabel.textContent = options.periodMode === "weekly" ? t(options.locale, "periodColumn") : t(options.locale, "monthColumn");
+export function renderPeriodSection(
+  els: AppElements,
+  report: ParsedStatement,
+  options: RenderOptions,
+): void {
+  const periods =
+    options.periodMode === "weekly" ? report.weekly : report.monthly;
+  els.periodTitle.textContent = formatMessage(options.locale, "periodTitle", {
+    period: options.periodMode,
+  });
+  els.periodColumnLabel.textContent =
+    options.periodMode === "weekly"
+      ? t(options.locale, "periodColumn")
+      : t(options.locale, "monthColumn");
   els.periodWeekly.classList.toggle("active", options.periodMode === "weekly");
-  els.periodMonthly.classList.toggle("active", options.periodMode === "monthly");
+  els.periodMonthly.classList.toggle(
+    "active",
+    options.periodMode === "monthly",
+  );
 
-  drawPeriodPerformanceChart(els.periodChart, periods, { locale: options.locale, theme: cssChartTheme() });
-  renderPeriods(els.periodRows, sortRows(periods, options.sorts.period), 12, Boolean(options.sorts.period));
-  renderIntradaySessions(els.intradaySessionRows, report.intradaySessions, options.locale);
+  drawPeriodPerformanceChart(els.periodChart, periods, {
+    locale: options.locale,
+    theme: cssChartTheme(),
+  });
+  renderPeriods(
+    els.periodRows,
+    sortRows(periods, options.sorts.period),
+    12,
+    Boolean(options.sorts.period),
+  );
+  renderIntradaySessions(
+    els.intradaySessionRows,
+    report.intradaySessions,
+    options.locale,
+  );
+  renderWeekdays(els.weekdayRows, report.weekdays, options.locale);
   updateSortButtons(options.sorts);
 }
 
-export function renderError(target: HTMLElement, locale: Locale, message: string): void {
+export function renderError(
+  target: HTMLElement,
+  locale: Locale,
+  message: string,
+): void {
   target.innerHTML = `<div class="insight"><strong>${escapeHtml(t(locale, "importFailed"))}</strong><p>${escapeHtml(message)}</p></div>`;
   window.setTimeout(() => {
     target.innerHTML = "";
@@ -159,13 +291,28 @@ type MetricCard = {
   valueHtml?: string;
 };
 
-function metricCards(cards: Array<[string, string, string, MetricTone?, string?] | MetricCard>): string {
+function metricCards(
+  cards: Array<[string, string, string, MetricTone?, string?] | MetricCard>,
+): string {
   return cards
     .map((card) => {
       const normalized = Array.isArray(card)
-        ? { label: card[0], value: card[1], note: card[2], tone: card[3], status: card[4] }
+        ? {
+            label: card[0],
+            value: card[1],
+            note: card[2],
+            tone: card[3],
+            status: card[4],
+          }
         : card;
-      const { label, value, note, tone = "neutral", status, valueHtml } = normalized;
+      const {
+        label,
+        value,
+        note,
+        tone = "neutral",
+        status,
+        valueHtml,
+      } = normalized;
       return `
       <article class="metric-card ${tone}">
         <span>${escapeHtml(label)}</span>
@@ -204,25 +351,34 @@ function thresholdStatusLabel(locale: Locale, value: number): string {
 
 function renderInsights(target: HTMLElement, items: Insight[]): void {
   target.innerHTML = items
-    .map((item) => `
+    .map(
+      (item) => `
       <div class="insight">
         <strong>${escapeHtml(item.title)}</strong>
         <p>${escapeHtml(item.body)}</p>
       </div>
-    `)
+    `,
+    )
     .join("");
 }
 
-function renderSymbols(target: HTMLElement, pager: HTMLElement, symbols: SymbolSummary[], locale: Locale, page: number): void {
+function renderSymbols(
+  target: HTMLElement,
+  pager: HTMLElement,
+  symbols: SymbolSummary[],
+  locale: Locale,
+  page: number,
+): void {
   const pageSize = 10;
   const pageCount = Math.max(1, Math.ceil(symbols.length / pageSize));
   const currentPage = Math.min(Math.max(page, 1), pageCount);
   const start = (currentPage - 1) * pageSize;
   const visibleSymbols = symbols.slice(start, start + pageSize);
 
-  target.innerHTML = visibleSymbols.map((row) => {
-    const tone = row.pnl >= 0 ? "win" : "loss";
-    return `
+  target.innerHTML = visibleSymbols
+    .map((row) => {
+      const tone = row.pnl >= 0 ? "win" : "loss";
+      return `
       <tr>
         <td>${escapeHtml(row.symbol)}</td>
         <td>${escapeHtml(localizeAssetClass(row.assetClass, locale))}</td>
@@ -232,24 +388,56 @@ function renderSymbols(target: HTMLElement, pager: HTMLElement, symbols: SymbolS
         <td class="num ${tone}">${money(row.average)}</td>
       </tr>
     `;
-  }).join("");
+    })
+    .join("");
 
   if (!symbols.length) {
     target.innerHTML = `<tr><td colspan="6">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
   }
 
+  const visiblePages = symbolPagerPages(currentPage, pageCount);
+  const pageButtons = visiblePages
+    .map((pageNumber) => {
+      const active = pageNumber === currentPage;
+      return `
+        <button class="pager-page${active ? " active" : ""}" type="button" data-symbol-page="${pageNumber}" aria-label="${escapeHtml(formatMessage(locale, "pageStatus", { page: pageNumber, pageCount }))}"${active ? ' aria-current="page"' : ""}>${pageNumber}</button>
+      `;
+    })
+    .join("");
+
   pager.innerHTML = `
     <button class="pager-button" type="button" data-symbol-page="prev" aria-label="${escapeHtml(t(locale, "previousPage"))}"${currentPage <= 1 ? " disabled" : ""}>‹</button>
+    <div class="pager-pages">${pageButtons}</div>
     <span class="pager-status">${escapeHtml(formatMessage(locale, "pageStatus", { page: currentPage, pageCount }))}</span>
     <button class="pager-button" type="button" data-symbol-page="next" aria-label="${escapeHtml(t(locale, "nextPage"))}"${currentPage >= pageCount ? " disabled" : ""}>›</button>
   `;
 }
 
-function renderPeriods(target: HTMLElement, periods: PeriodPerformance[], limit: number, sorted: boolean): void {
+function symbolPagerPages(currentPage: number, pageCount: number): number[] {
+  const windowSize = 7;
+  const halfWindow = Math.floor(windowSize / 2);
+  const start = Math.max(
+    1,
+    Math.min(currentPage - halfWindow, pageCount - windowSize + 1),
+  );
+  const end = Math.min(pageCount, start + windowSize - 1);
+  return Array.from(
+    { length: end - start + 1 },
+    (_value, index) => start + index,
+  );
+}
+
+function renderPeriods(
+  target: HTMLElement,
+  periods: PeriodPerformance[],
+  limit: number,
+  sorted: boolean,
+): void {
   const visibleRows = sorted ? periods.slice(0, limit) : periods.slice(-limit);
-  target.innerHTML = visibleRows.map((row) => {
-    const tone = row.pnl >= 0 ? "win" : "loss";
-    return `
+  target.innerHTML = visibleRows
+    .map((row) => {
+      const tone = row.pnl >= 0 ? "win" : "loss";
+      return `
       <tr>
         <td>${escapeHtml(row.label)}</td>
         <td class="num ${tone}">${money(row.pnl)}</td>
@@ -259,13 +447,19 @@ function renderPeriods(target: HTMLElement, periods: PeriodPerformance[], limit:
         <td class="num">${row.count}</td>
       </tr>
     `;
-  }).join("");
+    })
+    .join("");
 }
 
-function renderIntradaySessions(target: HTMLElement, rows: IntradaySessionSummary[], locale: Locale): void {
-  target.innerHTML = rows.map((row) => {
-    const tone = row.pnl >= 0 ? "win" : "loss";
-    return `
+function renderIntradaySessions(
+  target: HTMLElement,
+  rows: IntradaySessionSummary[],
+  locale: Locale,
+): void {
+  target.innerHTML = rows
+    .map((row) => {
+      const tone = row.pnl >= 0 ? "win" : "loss";
+      return `
       <tr>
         <td>${intradaySessionLabel(row.session, locale)}</td>
         <td class="num ${tone}">${money(row.pnl)}</td>
@@ -277,17 +471,98 @@ function renderIntradaySessions(target: HTMLElement, rows: IntradaySessionSummar
         <td class="num">${row.count}</td>
       </tr>
     `;
-  }).join("");
+    })
+    .join("");
 
   if (!rows.length) {
     target.innerHTML = `<tr><td colspan="8">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
   }
 }
 
-function renderAssetGroups(target: HTMLElement, rows: AssetGroupSummary[], locale: Locale): void {
-  target.innerHTML = rows.map((row) => {
-    const tone = row.pnl >= 0 ? "win" : "loss";
-    return `
+function renderWeekdays(
+  target: HTMLElement,
+  rows: WeekdayPerformance[],
+  locale: Locale,
+): void {
+  const rankedRows = [...rows].sort(
+    (a, b) =>
+      sortableRatio(b.payoffRatio) - sortableRatio(a.payoffRatio) ||
+      sortableRatio(b.profitFactor) - sortableRatio(a.profitFactor) ||
+      b.average - a.average ||
+      b.pnl - a.pnl,
+  );
+  target.innerHTML = rankedRows
+    .map((row, index) => {
+      const tone = row.pnl >= 0 ? "win" : "loss";
+      const rank =
+        index === 0
+          ? t(locale, "bestDay")
+          : index === rankedRows.length - 1
+            ? t(locale, "worstDay")
+            : "";
+      return `
+      <tr>
+        <td><span class="weekday-name">${escapeHtml(weekdayName(row.weekday, locale))}</span></td>
+        <td class="rank-cell">${rank ? `<span class="rank-pill ${index === 0 ? "win" : "loss"}">${escapeHtml(rank)}</span>` : ""}</td>
+        <td class="num ${tone}">${money(row.pnl)}</td>
+        <td class="num ${row.average >= 0 ? "win" : "loss"}">${money(row.average)}</td>
+        <td class="num">${ratio(row.profitFactor)}</td>
+        <td class="num">${ratio(row.payoffRatio)}</td>
+        <td class="num">${percent(row.winRate)}</td>
+        <td class="num">${row.count}</td>
+      </tr>
+    `;
+    })
+    .join("");
+
+  if (!rows.length) {
+    target.innerHTML = `<tr><td colspan="8">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
+  }
+}
+
+function renderDisciplineBanner(
+  target: HTMLElement,
+  report: ParsedStatement,
+  locale: Locale,
+): void {
+  const worstDay = [...report.daily]
+    .filter((day) => day.pnl < 0)
+    .sort((a, b) => a.pnl - b.pnl)[0];
+  const dailyLossThreshold = Math.max(
+    100,
+    Math.abs(report.metrics.avgWin || 0) * 2,
+    Math.abs(report.metrics.net || 0) * 0.12,
+  );
+  if (!worstDay || Math.abs(worstDay.pnl) < dailyLossThreshold) {
+    target.innerHTML = "";
+    target.hidden = true;
+    return;
+  }
+
+  target.hidden = false;
+  target.innerHTML = `
+    <div class="discipline-banner-copy">
+      <span>${escapeHtml(t(locale, "largeLossAlert"))}</span>
+      <strong>${escapeHtml(t(locale, "largeLossDiscipline"))}</strong>
+      <p>${escapeHtml(t(locale, "largeLossRule"))}</p>
+    </div>
+    <div class="discipline-banner-stat">
+      <span>${escapeHtml(t(locale, "worstLossDay"))}</span>
+      <strong>${money(worstDay.pnl)}</strong>
+      <small>${escapeHtml(worstDay.day || "--")} · ${worstDay.count} ${escapeHtml(t(locale, "trades"))}</small>
+    </div>
+  `;
+}
+
+function renderAssetGroups(
+  target: HTMLElement,
+  rows: AssetGroupSummary[],
+  locale: Locale,
+): void {
+  target.innerHTML = rows
+    .map((row) => {
+      const tone = row.pnl >= 0 ? "win" : "loss";
+      return `
       <article class="asset-card">
         <div class="asset-card-head">
           <span>${escapeHtml(assetGroupName(row.group, locale))}</span>
@@ -302,13 +577,19 @@ function renderAssetGroups(target: HTMLElement, rows: AssetGroupSummary[], local
         </dl>
       </article>
     `;
-  }).join("");
+    })
+    .join("");
 }
 
-function renderHoldingPeriods(target: HTMLElement, rows: HoldingPeriodSummary[], locale: Locale): void {
-  target.innerHTML = rows.map((row) => {
-    const tone = row.pnl >= 0 ? "win" : "loss";
-    return `
+function renderHoldingPeriods(
+  target: HTMLElement,
+  rows: HoldingPeriodSummary[],
+  locale: Locale,
+): void {
+  target.innerHTML = rows
+    .map((row) => {
+      const tone = row.pnl >= 0 ? "win" : "loss";
+      return `
       <tr>
         <td>${escapeHtml(holdingBucketName(row.bucket, locale))}</td>
         <td class="num">${formatHoldingDuration(row.medianHoldingDays, locale)}</td>
@@ -319,17 +600,23 @@ function renderHoldingPeriods(target: HTMLElement, rows: HoldingPeriodSummary[],
         <td class="num">${row.count}</td>
       </tr>
     `;
-  }).join("");
+    })
+    .join("");
 
   if (!rows.length) {
     target.innerHTML = `<tr><td colspan="7">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
   }
 }
 
-function renderDirectionSummaries(target: HTMLElement, rows: DirectionSummary[], locale: Locale): void {
-  target.innerHTML = rows.map((row) => {
-    const tone = row.pnl >= 0 ? "win" : "loss";
-    return `
+function renderDirectionSummaries(
+  target: HTMLElement,
+  rows: DirectionSummary[],
+  locale: Locale,
+): void {
+  target.innerHTML = rows
+    .map((row) => {
+      const tone = row.pnl >= 0 ? "win" : "loss";
+      return `
       <article class="direction-card ${row.direction}">
         <div class="direction-card-head">
           <span>${escapeHtml(directionName(row.direction, locale))}</span>
@@ -345,21 +632,28 @@ function renderDirectionSummaries(target: HTMLElement, rows: DirectionSummary[],
         </dl>
       </article>
     `;
-  }).join("");
+    })
+    .join("");
 
   if (!rows.length) {
     target.innerHTML = `<div class="empty-note">${escapeHtml(t(locale, "chartEmpty"))}</div>`;
   }
 }
 
-function sortRows<T extends object>(rows: T[], sort: SortState | undefined): T[] {
+function sortRows<T extends object>(
+  rows: T[],
+  sort: SortState | undefined,
+): T[] {
   if (!sort) return rows;
   const direction = sort.direction === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
     const left = sortableValue((a as Record<string, unknown>)[sort.key]);
     const right = sortableValue((b as Record<string, unknown>)[sort.key]);
     if (typeof left === "string" || typeof right === "string") {
-      const compared = String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" });
+      const compared = String(left).localeCompare(String(right), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
       return compared * direction;
     }
     if (left === right) return 0;
@@ -377,8 +671,16 @@ function sortableValue(value: unknown): string | number {
   return 0;
 }
 
+function sortableRatio(value: number): number {
+  if (value === Infinity) return Number.MAX_SAFE_INTEGER;
+  if (value === -Infinity) return Number.MIN_SAFE_INTEGER;
+  return Number.isFinite(value) ? value : 0;
+}
+
 function updateSortButtons(sorts: RenderOptions["sorts"]): void {
-  for (const button of document.querySelectorAll<HTMLButtonElement>(".sort-button")) {
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    ".sort-button",
+  )) {
     const table = button.dataset.sortTable as SortTable | undefined;
     const key = button.dataset.sortKey;
     const sort = table ? sorts[table] : undefined;
@@ -400,21 +702,35 @@ interface OptionUnderlyingSummary {
   details: ClosedTrade[];
 }
 
-function renderOptionRows(target: HTMLElement, rows: ClosedTrade[], locale: Locale, sort: SortState | undefined): void {
-  const summaries = sortRows(buildOptionUnderlyingSummaries(rows, locale), sort);
-  target.innerHTML = summaries.map((row, index) => {
-    const groupKey = `option-${index}`;
-    return [
-      renderOptionSummaryRow(row, groupKey, locale),
-      ...row.details.map((trade) => renderOptionDetailRow(trade, groupKey)),
-    ].join("");
-  }).join("");
+function renderOptionRows(
+  target: HTMLElement,
+  rows: ClosedTrade[],
+  locale: Locale,
+  sort: SortState | undefined,
+): void {
+  const summaries = sortRows(
+    buildOptionUnderlyingSummaries(rows, locale),
+    sort,
+  );
+  target.innerHTML = summaries
+    .map((row, index) => {
+      const groupKey = `option-${index}`;
+      return [
+        renderOptionSummaryRow(row, groupKey, locale),
+        ...row.details.map((trade) => renderOptionDetailRow(trade, groupKey)),
+      ].join("");
+    })
+    .join("");
   if (!rows.length) {
     target.innerHTML = `<tr><td colspan="7">${escapeHtml(t(locale, "chartEmpty"))}</td></tr>`;
   }
 }
 
-function renderOptionSummaryRow(row: OptionUnderlyingSummary, groupKey: string, locale: Locale): string {
+function renderOptionSummaryRow(
+  row: OptionUnderlyingSummary,
+  groupKey: string,
+  locale: Locale,
+): string {
   const tone = row.pnl >= 0 ? "win" : "loss";
   return `
     <tr class="group-row">
@@ -449,17 +765,29 @@ function renderOptionDetailRow(trade: ClosedTrade, groupKey: string): string {
   `;
 }
 
-function buildOptionUnderlyingSummaries(rows: ClosedTrade[], locale: Locale): OptionUnderlyingSummary[] {
+function buildOptionUnderlyingSummaries(
+  rows: ClosedTrade[],
+  locale: Locale,
+): OptionUnderlyingSummary[] {
   const groups = new Map<string, ClosedTrade[]>();
   for (const row of rows) {
-    const underlying = row.underlyingSymbol || extractUnderlying(row.displaySymbol) || "";
+    const underlying =
+      row.underlyingSymbol || extractUnderlying(row.displaySymbol) || "";
     groups.set(underlying, [...(groups.get(underlying) || []), row]);
   }
 
   return [...groups.entries()].map(([underlying, details]) => {
-    const sortedDetails = [...details].sort((a, b) => a.day.localeCompare(b.day) || Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl));
-    const dates = [...new Set(sortedDetails.map((row) => row.day).filter(Boolean))];
-    const pnls = sortedDetails.map((row) => row.realizedPnl).filter((value) => value !== 0);
+    const sortedDetails = [...details].sort(
+      (a, b) =>
+        a.day.localeCompare(b.day) ||
+        Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl),
+    );
+    const dates = [
+      ...new Set(sortedDetails.map((row) => row.day).filter(Boolean)),
+    ];
+    const pnls = sortedDetails
+      .map((row) => row.realizedPnl)
+      .filter((value) => value !== 0);
     const wins = pnls.filter((value) => value > 0);
     const losses = pnls.filter((value) => value < 0);
     const grossProfit = sum(wins);
@@ -467,10 +795,17 @@ function buildOptionUnderlyingSummaries(rows: ClosedTrade[], locale: Locale): Op
     const lastDate = dates[dates.length - 1] || "--";
     return {
       underlying,
-      dateLabel: formatMessage(locale, "datePlusCount", { date: lastDate, count: dates.length }),
+      dateLabel: formatMessage(locale, "datePlusCount", {
+        date: lastDate,
+        count: dates.length,
+      }),
       lastDate,
       pnl: sum(pnls),
-      profitFactor: grossLoss ? grossProfit / grossLoss : grossProfit ? Infinity : 0,
+      profitFactor: grossLoss
+        ? grossProfit / grossLoss
+        : grossProfit
+          ? Infinity
+          : 0,
       winRate: pnls.length ? wins.length / pnls.length : 0,
       count: sortedDetails.length,
       autoExpiryCount: sortedDetails.filter((row) => row.autoExpiry).length,
@@ -484,7 +819,10 @@ function extractUnderlying(symbol: string): string {
 }
 
 function sum(values: number[]): number {
-  return values.reduce((total, value) => total + (Number.isFinite(value) ? value : 0), 0);
+  return values.reduce(
+    (total, value) => total + (Number.isFinite(value) ? value : 0),
+    0,
+  );
 }
 
 function assetGroupName(group: AssetGroup, locale: Locale): string {
@@ -501,9 +839,20 @@ function localizeAssetClass(value: string, locale: Locale): string {
   return value || t(locale, "other");
 }
 
-function intradayWeaknessCard(rows: IntradaySessionSummary[], locale: Locale): MetricCard {
-  const weakest = [...rows].sort((a, b) => a.average - b.average || a.medianPnl - b.medianPnl || a.pnl - b.pnl)[0];
-  if (!weakest) return { label: t(locale, "weakestSession"), value: "--", note: t(locale, "intradaySessionNoData") };
+function intradayWeaknessCard(
+  rows: IntradaySessionSummary[],
+  locale: Locale,
+): MetricCard {
+  const weakest = [...rows].sort(
+    (a, b) =>
+      a.average - b.average || a.medianPnl - b.medianPnl || a.pnl - b.pnl,
+  )[0];
+  if (!weakest)
+    return {
+      label: t(locale, "weakestSession"),
+      value: "--",
+      note: t(locale, "intradaySessionNoData"),
+    };
 
   const tone = weakest.average >= 0 ? "win" : "loss";
   return {
@@ -525,7 +874,8 @@ function formatHoldingDuration(value: number, locale: Locale): string {
     const totalMinutes = Math.max(1, Math.round(days * 24 * 60));
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    if (hours && minutes) return `${hours}${t(locale, "hoursShort")} ${minutes}${t(locale, "minutesShort")}`;
+    if (hours && minutes)
+      return `${hours}${t(locale, "hoursShort")} ${minutes}${t(locale, "minutesShort")}`;
     if (hours) return `${hours}${t(locale, "hoursShort")}`;
     return `${minutes}${t(locale, "minutesShort")}`;
   }
@@ -539,7 +889,10 @@ function intradaySessionName(session: IntradaySession, locale: Locale): string {
   return t(locale, "sessionLate");
 }
 
-function intradaySessionLabel(session: IntradaySession, locale: Locale): string {
+function intradaySessionLabel(
+  session: IntradaySession,
+  locale: Locale,
+): string {
   return `
     <span class="session-name">${escapeHtml(intradaySessionName(session, locale))}</span>
     <span class="session-range">${escapeHtml(intradaySessionRange(session))}</span>
@@ -550,6 +903,19 @@ function intradaySessionRange(session: IntradaySession): string {
   if (session === "morning") return "09:30-11:30";
   if (session === "midday") return "11:30-14:00";
   return "14:00-16:15";
+}
+
+function weekdayName(weekday: number, locale: Locale): string {
+  const keys: TranslationKey[] = [
+    "weekdaySunday",
+    "weekdayMonday",
+    "weekdayTuesday",
+    "weekdayWednesday",
+    "weekdayThursday",
+    "weekdayFriday",
+    "weekdaySaturday",
+  ];
+  return t(locale, keys[weekday] || "unknown");
 }
 
 function holdingBucketName(bucket: HoldingBucket, locale: Locale): string {

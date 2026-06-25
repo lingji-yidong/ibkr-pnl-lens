@@ -117,7 +117,7 @@ export function drawPeriodPerformanceChart(canvas: HTMLCanvasElement, periods: P
     ctx.font = "12px system-ui";
     ctx.textAlign = "left";
     ctx.fillText(money(pnlMax), pad, 18);
-    ctx.fillText(money(pnlMin), pad, height - 10);
+    ctx.fillText(money(pnlMin), pad, plotBottom + 16);
     ctx.textAlign = "right";
     ctx.fillText(t(options.locale, "realized"), width - pad, 18);
 
@@ -282,21 +282,36 @@ function drawPeriodLabels(
   periods: PeriodPerformance[],
   { width, height, pad, step, options }: { width: number; height: number; pad: number; step: number; options: ChartOptions },
 ): void {
-  const maxLabels = width < 620 ? 4 : 7;
+  const maxLabels = width < 620 ? 3 : 6;
   const interval = Math.max(1, Math.ceil(periods.length / maxLabels));
-  const labelY = height - 28;
+  const minGap = width < 620 ? 96 : 118;
+  const labelY = height - 32;
+  let lastLabelX = -Infinity;
+
   ctx.fillStyle = options.theme.muted;
   ctx.font = "11px system-ui";
   ctx.textAlign = "center";
   periods.forEach((period, index) => {
     if (index % interval !== 0 && index !== periods.length - 1) return;
     const x = pad + index * step;
-    ctx.fillText(shortPeriodLabel(period.label), x, labelY);
+    if (x - lastLabelX < minGap) return;
+    const label = shortPeriodLabel(period.label);
+    if (label.includes("\n")) {
+      const [start, end] = label.split("\n");
+      ctx.fillText(start || "", x, labelY);
+      ctx.fillText(end || "", x, labelY + 13);
+    } else {
+      ctx.fillText(label, x, labelY + 6);
+    }
+    lastLabelX = x;
   });
 }
 
 function shortPeriodLabel(label: string): string {
-  if (label.includes(" - ")) return label.slice(5);
+  if (label.includes(" - ")) {
+    const [start, end] = label.split(" - ");
+    return `${(start || "").slice(5)}\n${end || ""}`;
+  }
   return label;
 }
 
