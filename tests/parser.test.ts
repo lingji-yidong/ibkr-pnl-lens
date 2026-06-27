@@ -40,6 +40,15 @@ const xmlWithMisleadingClosedLot = `
 </FlexStatement>
 `;
 
+const xmlWithOnlyWinningTrades = `
+<FlexStatement accountId="DEMO-WINS" fromDate="20260101" toDate="20260131">
+  <Trades>
+    <Trade assetCategory="STK" currency="USD" symbol="AAA" description="AAA" underlyingSymbol="AAA" dateTime="20260102;100000" tradeDate="20260102" quantity="1" tradePrice="10" proceeds="10" ibCommission="0" cost="0" fifoPnlRealized="100" mtmPnl="100" openCloseIndicator="C" notes="P" transactionType="Sell" />
+    <Trade assetCategory="STK" currency="USD" symbol="BBB" description="BBB" underlyingSymbol="BBB" dateTime="20260103;100000" tradeDate="20260103" quantity="1" tradePrice="10" proceeds="10" ibCommission="0" cost="0" fifoPnlRealized="50" mtmPnl="50" openCloseIndicator="C" notes="P" transactionType="Sell" />
+  </Trades>
+</FlexStatement>
+`;
+
 const xmlWithMultipleMetaOptionLots = `
 <FlexStatement accountId="DEMO-META" fromDate="20260528" toDate="20260604">
   <Trades>
@@ -124,6 +133,7 @@ const report = parseIbkrStatement(xml);
 const multiAccountReport = parseIbkrStatement(multiAccountXml);
 const secondAccountReport = parseIbkrStatement(multiAccountXml, 1);
 const misleadingLotReport = parseIbkrStatement(xmlWithMisleadingClosedLot);
+const onlyWinningTradesReport = parseIbkrStatement(xmlWithOnlyWinningTrades);
 const multipleMetaLotsReport = parseIbkrStatement(xmlWithMultipleMetaOptionLots);
 const longShortHoldingReport = parseIbkrStatement(xmlWithLongShortHolding);
 const boughtPutExposureReport = parseIbkrStatement(xmlWithBoughtPutExposure);
@@ -150,6 +160,8 @@ assert.equal(misleadingLotReport.metrics.executionCount, 1);
 assert.equal(misleadingLotReport.metrics.closedCount, 1);
 assert.equal(misleadingLotReport.metrics.winRate, 1);
 assert.equal(misleadingLotReport.metrics.payoffRatio, Infinity);
+assert.equal(onlyWinningTradesReport.metrics.profitFactor, Infinity);
+assert.equal(onlyWinningTradesReport.metrics.payoffRatio, Infinity);
 assert.equal(round2(multipleMetaLotsReport.metrics.net), 133.45);
 assert.equal(multipleMetaLotsReport.metrics.closedCount, 1);
 assert.equal(round2(multipleMetaLotsReport.closedTrades[0]?.fifoRealizedPnl || 0), 0.17);
@@ -235,6 +247,15 @@ const advice = buildAdviceSignals(report);
 assert.ok(Array.isArray(advice.bestLoserWins));
 assert.ok(Array.isArray(advice.offlineAdvice));
 assert.ok(advice.discipline.every((signal) => signal.id && signal.group === "discipline"));
+
+const allWinAdvice = buildAdviceSignals(onlyWinningTradesReport);
+const allWinProfitFactorSignal = allWinAdvice.discipline.find((signal) => signal.id.startsWith("profit_factor_"));
+assert.equal(allWinProfitFactorSignal?.id, "profit_factor_healthy");
+assert.equal(allWinProfitFactorSignal?.data.profitFactor, Infinity);
+assert.equal(
+  allWinAdvice.discipline.some((signal) => signal.id === "high_winrate_weak_payoff"),
+  false,
+);
 
 if (report.metrics.autoExpiryCount > 0) {
   assert.ok(

@@ -136,7 +136,7 @@ function buildSignals(context: AdviceContext): AdviceSignal[] {
 }
 
 function buildProfitFactorSignal(context: AdviceContext): AdviceSignal {
-  const profitFactor = safeNumber(context.metrics.profitFactor);
+  const profitFactor = safeRatioNumber(context.metrics.profitFactor);
   if (profitFactor < 1) return signal("profit_factor_below_one", "discipline", "danger", { profitFactor });
   if (profitFactor < 1.5) return signal("profit_factor_thin_edge", "discipline", "warning", { profitFactor });
   return signal("profit_factor_healthy", "discipline", "info", { profitFactor });
@@ -144,7 +144,7 @@ function buildProfitFactorSignal(context: AdviceContext): AdviceSignal {
 
 function buildPayoffSignal(context: AdviceContext): AdviceSignal | undefined {
   const winRate = safeNumber(context.metrics.winRate);
-  const payoffRatio = safeNumber(context.metrics.payoffRatio);
+  const payoffRatio = safeRatioNumber(context.metrics.payoffRatio);
   if (payoffRatio >= 1) return undefined;
   if (winRate < 0.55) return signal("winrate_and_payoff_weak", "discipline", "danger", { winRate, payoffRatio });
   return signal("high_winrate_weak_payoff", "discipline", "warning", { winRate, payoffRatio });
@@ -153,8 +153,8 @@ function buildPayoffSignal(context: AdviceContext): AdviceSignal | undefined {
 function buildAssetSignal(context: AdviceContext): AdviceSignal | undefined {
   const { option, stock } = context;
   if (option && stock) {
-    const optionProfitFactor = safeNumber(option.profitFactor);
-    const stockProfitFactor = safeNumber(stock.profitFactor);
+    const optionProfitFactor = safeRatioNumber(option.profitFactor);
+    const stockProfitFactor = safeRatioNumber(stock.profitFactor);
     return signal("asset_group_relative_edge", "offlineAdvice", "info", {
       stronger: optionProfitFactor >= stockProfitFactor ? "option" : "stock",
       optionProfitFactor,
@@ -163,13 +163,13 @@ function buildAssetSignal(context: AdviceContext): AdviceSignal | undefined {
   }
   if (option) {
     return signal("option_sample_dominant", "offlineAdvice", "info", {
-      optionProfitFactor: safeNumber(option.profitFactor),
+      optionProfitFactor: safeRatioNumber(option.profitFactor),
       optionWinRate: safeNumber(option.winRate),
     });
   }
   if (stock) {
     return signal("stock_sample_dominant", "offlineAdvice", "info", {
-      stockProfitFactor: safeNumber(stock.profitFactor),
+      stockProfitFactor: safeRatioNumber(stock.profitFactor),
       stockWinRate: safeNumber(stock.winRate),
     });
   }
@@ -187,4 +187,8 @@ function signal<const Id extends AdviceSignalId>(
 
 function safeNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function safeRatioNumber(value: unknown): number {
+  return typeof value === "number" && !Number.isNaN(value) ? value : 0;
 }
