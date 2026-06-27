@@ -77,7 +77,7 @@ export const fi = {
   intradaySessionTitle: "Avaus / keskipäivä / sulku -voittoprosentti",
   intradaySessionHint: "Ryhmittelee sulut session mukaan ja vertaa toteutunutta tulosta, mediaani P/L:ää, keskiarvoa, PF:ää, suhdetta ja voittoprosenttia.",
   weekdayReviewTitle: "Kaupankäynnin tulos viikonpäivittäin",
-  weekdayReviewHint: "Vertaa vain normaalin session sulkuja viikonpäivittäin ja näyttää parhaan sekä heikoimman tuotto-riskisuhteen.",
+  weekdayReviewHint: "Vertaa normaalin session sulkuja ja automaattisia erääntymisiä viikonpäivittäin ja näyttää parhaan sekä heikoimman tuotto-riskisuhteen.",
   weekday: "Viikonpäivä",
   weekdaySunday: "Sunnuntai",
   weekdayMonday: "Maanantai",

@@ -77,7 +77,7 @@ export const zhHant = {
   intradaySessionTitle: "早午尾盤勝率分析",
   intradaySessionHint: "按平倉時間比較早盤、午盤、尾盤的已實現、中位數、平均每筆、PF、盈虧比與勝率。",
   weekdayReviewTitle: "星期幾交易表現",
-  weekdayReviewHint: "只統計常規盤平倉，按星期比較哪天盈虧比最好、哪天最差。",
+  weekdayReviewHint: "統計常規盤平倉與自動到期，按星期比較哪天盈虧比最好、哪天最差。",
   weekday: "星期",
   weekdaySunday: "星期日",
   weekdayMonday: "星期一",

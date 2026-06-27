@@ -77,7 +77,7 @@ export const ja = {
   intradaySessionTitle: "寄り・昼・引けの勝率分析",
   intradaySessionHint: "決済時刻で寄り、昼、引けに分け、実現損益、中央値、平均、PF、損益比、勝率を比較します。",
   weekdayReviewTitle: "曜日別の取引成績",
-  weekdayReviewHint: "通常時間内の決済を曜日別に比べ、損益比が最も良い日と悪い日を確認します。",
+  weekdayReviewHint: "通常時間内の決済と自動満期を曜日別に比べ、損益比が最も良い日と悪い日を確認します。",
   weekday: "曜日",
   weekdaySunday: "日曜日",
   weekdayMonday: "月曜日",

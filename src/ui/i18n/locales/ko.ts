@@ -77,7 +77,7 @@ export const ko = {
   intradaySessionTitle: "장초반 / 점심 / 장마감 승률 분석",
   intradaySessionHint: "청산 시간을 기준으로 세션별 실현손익, 중앙값, 평균, PF, 손익비, 승률을 비교합니다.",
   weekdayReviewTitle: "요일별 거래 성과",
-  weekdayReviewHint: "정규장 청산만 요일별로 비교해 손익비가 가장 좋은 날과 가장 나쁜 날을 보여줍니다.",
+  weekdayReviewHint: "정규장 청산과 자동 만기를 요일별로 비교해 손익비가 가장 좋은 날과 가장 나쁜 날을 보여줍니다.",
   weekday: "요일",
   weekdaySunday: "일요일",
   weekdayMonday: "월요일",

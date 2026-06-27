@@ -77,7 +77,7 @@ export const de = {
   intradaySessionTitle: "Trefferquote: Eröffnung / Mittag / Schluss",
   intradaySessionHint: "Gruppiert Schließungen nach Sitzung und vergleicht Realisiert, Median-P/L, Durchschnitt, PF, Payoff und Trefferquote.",
   weekdayReviewTitle: "Performance nach Wochentag",
-  weekdayReviewHint: "Vergleicht reguläre Schließungen nach Wochentag und zeigt die beste und schwächste Payoff-Ratio.",
+  weekdayReviewHint: "Vergleicht reguläre Schließungen und Auto-Verfall nach Wochentag und zeigt die beste und schwächste Payoff-Ratio.",
   weekday: "Wochentag",
   weekdaySunday: "Sonntag",
   weekdayMonday: "Montag",

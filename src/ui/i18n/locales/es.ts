@@ -77,7 +77,7 @@ export const es = {
   intradaySessionTitle: "Acierto en apertura / mediodía / cierre",
   intradaySessionHint: "Agrupa cierres por sesión para comparar realizado, P/L mediano, promedio, PF, ratio P/L y acierto.",
   weekdayReviewTitle: "Rendimiento por día de la semana",
-  weekdayReviewHint: "Compara solo cierres de sesión regular por día para mostrar la mejor y peor relación P/L.",
+  weekdayReviewHint: "Compara cierres de sesión regular y vencimientos automáticos por día para mostrar la mejor y peor relación P/L.",
   weekday: "Día",
   weekdaySunday: "Domingo",
   weekdayMonday: "Lunes",

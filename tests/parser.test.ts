@@ -120,11 +120,12 @@ const xmlWithIndependentSameDayOptions = `
 `;
 
 const xmlWithWeekendAndPremarketCloses = `
-<FlexStatement accountId="DEMO-WEEKDAY" fromDate="20260104" toDate="20260106">
+<FlexStatement accountId="DEMO-WEEKDAY" fromDate="20260104" toDate="20260109">
   <Trades>
     <Trade assetCategory="STK" currency="USD" symbol="SUN" description="SUN" underlyingSymbol="SUN" dateTime="20260104;100000" tradeDate="20260104" quantity="1" tradePrice="10" proceeds="10" ibCommission="0" cost="0" fifoPnlRealized="40" mtmPnl="40" openCloseIndicator="C" transactionType="Sell" />
     <Trade assetCategory="STK" currency="USD" symbol="PRE" description="PRE" underlyingSymbol="PRE" dateTime="20260105;080000" tradeDate="20260105" quantity="1" tradePrice="10" proceeds="10" ibCommission="0" cost="0" fifoPnlRealized="-30" mtmPnl="-30" openCloseIndicator="C" transactionType="Sell" />
     <Trade assetCategory="STK" currency="USD" symbol="REG" description="REG" underlyingSymbol="REG" dateTime="20260105;100000" tradeDate="20260105" quantity="1" tradePrice="10" proceeds="10" ibCommission="0" cost="0" fifoPnlRealized="25" mtmPnl="25" openCloseIndicator="C" transactionType="Sell" />
+    <Trade assetCategory="OPT" currency="USD" symbol="SPY   260109C00450000" description="SPY 09JAN26 450 C" underlyingSymbol="SPY" dateTime="20260109" tradeDate="20260109" quantity="-1" tradePrice="0" proceeds="0" ibCommission="0" netCash="0" cost="100" fifoPnlRealized="-100" mtmPnl="-100" openCloseIndicator="C" notes="Ep" transactionType="Expire" expiry="20260109" putCall="C" strike="450" multiplier="100" />
   </Trades>
 </FlexStatement>
 `;
@@ -201,9 +202,11 @@ assert.equal(round2(report.intradaySessions.find((row) => row.session === "midda
 assert.equal(round2(report.intradaySessions.find((row) => row.session === "midday")?.medianPnl || 0), -110);
 assert.ok(report.weekdays.length > 0);
 assert.ok(report.weekdays.every((row) => row.count === row.wins + row.losses));
-assert.deepEqual(weekendAndPremarketClosesReport.weekdays.map((row) => row.weekday), [1]);
+assert.deepEqual(weekendAndPremarketClosesReport.weekdays.map((row) => row.weekday), [1, 5]);
 assert.equal(weekendAndPremarketClosesReport.weekdays[0]?.count, 1);
 assert.equal(weekendAndPremarketClosesReport.weekdays[0]?.pnl, 25);
+assert.equal(weekendAndPremarketClosesReport.weekdays[1]?.count, 1);
+assert.equal(weekendAndPremarketClosesReport.weekdays[1]?.pnl, -100);
 
 // Weekly/monthly PnL should reconcile with total net PnL
 assert.equal(

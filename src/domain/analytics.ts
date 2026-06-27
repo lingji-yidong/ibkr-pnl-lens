@@ -451,7 +451,7 @@ function buildWeekdayPerformance(closedTrades: ClosedTrade[]): WeekdayPerformanc
   const byWeekday = new Map<number, number[]>();
   for (const trade of closedTrades) {
     if (!trade.day || trade.realizedPnl === 0) continue;
-    if (!intradaySession(trade.date)) continue;
+    if (!trade.autoExpiry && !intradaySession(trade.date)) continue;
     const weekday = weekdayIndex(trade.day);
     if (weekday === null || weekday === 0 || weekday === 6) continue;
     byWeekday.set(weekday, [...(byWeekday.get(weekday) || []), trade.realizedPnl]);

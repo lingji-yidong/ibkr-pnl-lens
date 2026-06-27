@@ -77,7 +77,7 @@ export const en = {
   intradaySessionTitle: "Open / midday / close win-rate analysis",
   intradaySessionHint: "Groups closes by market session to compare realized P/L, median P/L, average trade, PF, payoff, and win rate.",
   weekdayReviewTitle: "Weekday trading performance",
-  weekdayReviewHint: "Compares regular-session closes by weekday to show the best and worst payoff ratio.",
+  weekdayReviewHint: "Compares regular-session closes and auto expiries by weekday to show the best and worst payoff ratio.",
   weekday: "Weekday",
   weekdaySunday: "Sunday",
   weekdayMonday: "Monday",

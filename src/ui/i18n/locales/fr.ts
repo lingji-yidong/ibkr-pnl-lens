@@ -77,7 +77,7 @@ export const fr = {
   intradaySessionTitle: "Taux de réussite ouverture / midi / clôture",
   intradaySessionHint: "Regroupe les clôtures par session pour comparer réalisé, P/L médian, moyenne, PF, ratio et réussite.",
   weekdayReviewTitle: "Performance par jour de semaine",
-  weekdayReviewHint: "Compare uniquement les clôtures de séance régulière par jour afin de montrer le meilleur et le pire ratio gain/perte.",
+  weekdayReviewHint: "Compare les clôtures de séance régulière et les expirations automatiques par jour afin de montrer le meilleur et le pire ratio gain/perte.",
   weekday: "Jour",
   weekdaySunday: "Dimanche",
   weekdayMonday: "Lundi",
